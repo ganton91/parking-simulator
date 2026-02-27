@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Parking Simulator</title>
+
+<style>
+body{
+    margin:0;
+    background:#222;
+    font-family:Arial;
+    color:white;
+    overflow-x:hidden;
+    overflow-y:hidden;
+}
+
+#ui{
+    position:fixed;
+    left:10px;
+    top:50px;
+    bottom:40px;              /* 👈 αυτό είναι το κλειδί */
+    background:#111;
+    padding:15px;
+    border-radius:8px;
+
+    width:min(300px, 90vw);
+
+    overflow-y:auto;
+}
+
+#ui label{
+    display:block;
+    margin-top:8px;
+}
+
+#ui h3{
+    margin:12px 0 6px 0;
+    font-size:16px;
+}
+
+#ui hr{
+    margin:14px 0;
+    border:0;
+    border-top:1px solid #444;
+}
+
+canvas{
+    display:block;
+    cursor: crosshair;
+}
+
+button{
+    margin-top:6px;
+    width:100%;
+}
+
+#scaleNumber,
+#opacityNumber,
+#drawingOpacityNumber,
+#gridOpacityNumber,
+#topSpeedNumber,
+#accelerationNumber{
+    width:90px;
+    padding:4px;
+    box-sizing:border-box;
+}
+
+.centerButton{
+    display:block;
+    margin:10px auto 0 auto;   /* κεντράρισμα */
+    width:80%;
+}
+
+.smallButton{
+    display:block;
+    margin:10px 0 0 20px;
+    width:60%;
+}
+
+.applyBtn{
+    margin-top:30px;  /* extra κενό από πάνω */
+}
+
+.centerImport{
+    display:block;
+    margin:10px 0 0 20px;
+}
+
+.toolActivePaint{
+    background:#4caf50 !important;
+}
+
+.toolActiveErase{
+    background:#f44336 !important;
+}
+
+.statusDisabled{
+    color: #666 !important;
+    opacity: 0.6;
+}
+
+.resetBtn {
+    display:block;
+    margin:30px auto 30px auto;   /* κεντράρισμα */
+    width:55%;
+    background-color: #ffeb3b;
+    color: #000;
+}
+
+.resetBtn:hover {
+    background-color: #ffd000;
+}
+
+@media (max-width: 900px){
+    #ui{
+        width:240px;
+    }
+}
+
+.modal{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.5);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:9999;
+}
+
+.modal.hidden{
+    display:none;
+}
+
+.modal-content{
+    background:#1e1e1e;
+    padding:20px 30px;
+    border-radius:8px;
+    width:320px;
+    text-align:center;
+    color:white;
+}
+
+.modal-actions{
+    margin-top:15px;
+    display:flex;
+    justify-content:space-between;
+    gap:10px;
+}
+
+.modal-actions button{
+    width:100%;
+}
+
+/* ============================= */
+/* Shortcut Bar (Bottom Footer) */
+/* ============================= */
+
+#shortcutBar{
+    position:fixed;
+    bottom:0;
+    left:0;
+    right:0;
+
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    gap:18px;
+    flex-wrap:wrap;
+
+    background:rgba(0,0,0,0.55);
+    color:#ddd;
+
+    font-size:12px;
+    letter-spacing:0.4px;
+
+    padding:6px 12px;
+
+    z-index:5000;
+
+    user-select:none;
+}
+
+#shortcutBar span{
+    white-space:nowrap;
+    opacity:0.85;
+}
+
+#shortcutBar b{
+    color:white;
+    font-weight:600;
+}
+
+#shortcutBar .sep{
+    opacity:0.35;
+    font-weight:400;
+}
+
+/* Status blocks (Mode / Camera) */
+.statusBlock{
+    color:#aaa;
+    white-space:nowrap;
+}
+
+.statusValue{
+    font-weight:600;
+    color:#4caf50; /* default = EDIT / FREE */
+}
+
+input:disabled,
+button:disabled,
+select:disabled{
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div id="ui">
+
+<hr>
+<h3>Background Image</h3>
+
+<input type="file" id="imageLoader" accept="image/png, image/jpeg">
+
+<label>Scale</label>
+<input type="range" id="scaleSlider" min="0.1" max="5" step="0.0001" value="1">
+<input type="number" id="scaleNumber" step="0.0001" value="1">
+
+<label>Opacity</label>
+<input type="range" id="opacitySlider" min="0" max="1" step="0.01" value="0.5">
+<input type="number" id="opacityNumber" min="0" max="1" step="0.01" value="0.5">
+
+<hr>
+<h3>Grid Settings</h3>
+
+<label>Grid Width (m)</label>
+<input type="number" id="worldWidthInput" value="50">
+
+<label>Grid Height (m)</label>
+<input type="number" id="worldHeightInput" value="50">
+
+<label>Grid Opacity</label>
+<input type="range" id="gridOpacitySlider" min="0" max="1" step="0.01" value="0.2">
+<input type="number" id="gridOpacityNumber" min="0" max="1" step="0.01" value="0.2">
+
+<button id="applyWorldBtn" class="centerButton applyBtn" onclick="applyWorldSettings()">Apply Grid</button>
+
+<hr>
+<h3>Draw Settings</h3>
+
+<label>Tool</label>
+
+<button id="paintBtn">Paint</button>
+<button id="eraseBtn">Erase</button>
+
+<label>Color</label>
+<input type="color" id="colorPicker" value="#777777">
+
+<label>Brush Size</label>
+<select id="gridSizeSelect">
+    <option value="1">10cm</option>
+    <option value="2">20cm</option>
+    <option value="3">30cm</option>
+</select>
+
+<label>Drawing Opacity</label>
+<input type="range" id="drawingOpacitySlider" min="0" max="1" step="0.01" value="1">
+<input type="number" id="drawingOpacityNumber" min="0" max="1" step="0.01" value="1">
+
+<button id="eraseAllBtn" class="centerButton applyBtn">Erase All</button>
+
+<hr>
+<h3>Vehicle Settings</h3>
+
+<label>Wheelbase (m)</label>
+<input type="number" id="wheelbaseInput" step="0.01" value="2.6">
+
+<label>Front Overhang (m)</label>
+<input type="number" id="frontOverhangInput" step="0.01" value="0.9">
+
+<label>Rear Overhang (m)</label>
+<input type="number" id="rearOverhangInput" step="0.01" value="0.8">
+
+<label>Track Width (m)</label>
+<input type="number" id="trackWidthInput" step="0.01" value="1.55">
+
+<label>Body Width (m)</label>
+<input type="number" id="bodyWidthInput" step="0.01" value="1.8">
+
+<label>Turning Circle (m)</label>
+<input type="number" id="turningCircleInput" step="0.1" value="10.8">
+
+<label>Top Speed (m/s)</label>
+<input type="range" id="topSpeedSlider" min="1" max="20" step="0.1" value="8">
+<input type="number" id="topSpeedNumber" step="0.1" value="8">
+
+<label>Acceleration (m/s²)</label>
+<input type="range" id="accelerationSlider" min="1" max="15" step="0.1" value="4">
+<input type="number" id="accelerationNumber" step="0.1" value="4">
+
+<label>Car Color</label>
+<input type="color" id="carColorPicker" value="#ff4444">
+
+<button id="applyCarBtn" class="centerButton applyBtn">
+    Apply Vehicle
+</button>
+
+<hr>
+
+<h3>Calculated</h3>
+<div id="lengthStat"></div>
+<div id="widthStat"></div>
+<div id="wheelbaseStat"></div>
+<div id="turningStat"></div>
+
+<hr>
+<h3>Select Mode</h3>
+
+<button onclick="setMode('edit')">Edit Mode</button>
+<button onclick="setMode('play')">Play Mode</button>
+<button id="resetVehicleBtn" class="resetBtn">Reset Vehicle Position</button>
+
+<hr>
+<h3>Camera Settings</h3>
+
+<button id="freeCameraBtn">Free Camera</button>
+<button id="followCameraBtn">Follow Vehicle</button>
+
+<hr>
+<h3>Layouts</h3>
+
+<label>Export:</label>
+<button class="centerButton smallButton" onclick="exportLayout()">Save Layout</button>
+
+<label>Import:</label>
+<input type="file" id="layoutLoader" class="centerImport" accept=".json">
+
+</div>
+
+<canvas id="game"></canvas>
+
+<div id="shortcutBar">
+
+    <span class="statusBlock">
+    <b>Mode:</b> <span id="modeStatus" class="statusValue">EDIT</span>
+    </span>
+
+    <span class="statusBlock">
+    <b>Camera:</b> <span id="cameraStatus" class="statusValue">FREE</span>
+    </span>
+
+    <span class="sep">|</span>
+
+  <span><b>M</b>:Mode</span>
+  <span><b>C</b>:Cam</span>
+  <span><b>P</b>:Paint</span>
+  <span><b>E</b>:Erase</span>
+  <span><b>I</b>:Color Picker</span>
+
+  <span class="sep">-</span>
+
+  <span><b>Cmd+Z</b>:Undo</span>
+  <span><b>Cmd+Shift+Z</b>:Redo</span>
+  <span><b>Cmd+S</b>:Save</span>
+  <span><b>Esc</b>:Cancel</span>
+
+  <span class="sep">-</span>
+
+  <span><b>Shift+Drag</b>:Lock Axis</span>
+  <span><b>Shift+Click</b>:Straight Line</span>
+  <span><b>Mouse Wheel</b>:Zoom In/Out</span>
+  <span><b>Middle Mouse+Drag</b>:Pan</span>
+
+</div>
+
+<!-- Erase All Confirmation Modal -->
+<div id="eraseConfirmModal" class="modal hidden">
+  <div class="modal-content">
+    <h3>Erase All?</h3>
+    <p>This will permanently remove all painted cells.</p>
+    <div class="modal-actions">
+      <button id="confirmEraseBtn">Yes, Erase</button>
+      <button id="cancelEraseBtn">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script src="game.js"></script>
+
+</body>
+</html>

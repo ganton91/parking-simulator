@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parking Simulator</title>
+    <style>
+        :root{
+            --ui-bg:#111;
+            --ui-border:#222;
+            --ui-text:#ddd;
+            --accent:#ff9800;
+            --good:#4caf50;
+            --muted:#888;
+        }
+
+        html,body{
+            margin:0;
+            padding:0;
+            overflow:hidden;
+            background:#000;
+            color:var(--ui-text);
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        /* Canvas area */
+        #game{
+            position:absolute;
+            top:0;
+            left:0;
+            width:100vw;
+            height:100vh;
+            cursor:crosshair;
+            background:#000;
+        }
+
+        /* Left UI panel */
+        #ui{
+            position:fixed;
+            left:10px;
+            width:320px;
+
+            /* dynamic top/bottom set by JS */
+            /* top: 45px;
+            bottom: 40px; */
+
+            background: rgba(15,15,15,0.80);
+            border: 1px solid rgba(255,255,255,0.10);
+            border-radius: 10px;
+            padding: 12px;
+            box-shadow: 0 0 40px rgba(0,0,0,0.55);
+        }
+
+        .section{
+            margin-bottom: 14px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.10);
+        }
+        .section:last-child{ border-bottom:none; margin-bottom:0; padding-bottom:0; }
+
+        h2{
+            margin:0 0 8px 0;
+            font-size:14px;
+            letter-spacing:0.5px;
+            color:#eee;
+        }
+
+        label{
+            display:block;
+            font-size:12px;
+            color: rgba(255,255,255,0.75);
+            margin: 6px 0 4px 0;
+        }
+
+        input[type="number"],
+        input[type="text"],
+        select{
+            width:100%;
+            box-sizing:border-box;
+            padding:6px;
+            background:#0d0d0d;
+            border:1px solid rgba(255,255,255,0.15);
+            color:#ddd;
+            border-radius: 6px;
+            outline:none;
+        }
+
+        input[type="number"]:disabled,
+        input[type="text"]:disabled,
+        select:disabled,
+        input[type="range"]:disabled,
+        input[type="color"]:disabled,
+        button:disabled{
+            opacity:0.45;
+            cursor:not-allowed;
+        }
+
+        input[type="range"]{
+            width:100%;
+        }
+
+        button{
+            width:100%;
+            margin-top:8px;
+            padding:8px;
+            border-radius:8px;
+            border:1px solid rgba(255,255,255,0.18);
+            background: rgba(255,255,255,0.06);
+            color:#ddd;
+            cursor:pointer;
+        }
+
+        button:hover{
+            background: rgba(255,255,255,0.10);
+        }
+
+        /* Buttons half width layout */
+        .row{
+            display:flex;
+            gap: 8px;
+        }
+
+        .half{
+            width: calc(50% - 4px);
+        }
+
+        /* Tool buttons */
+        .toolActivePaint{
+            border-color: rgba(255,152,0,0.8);
+            box-shadow: 0 0 0 3px rgba(255,152,0,0.10);
+            background: rgba(255,152,0,0.12);
+        }
+
+        .toolActiveErase{
+            border-color: rgba(244,67,54,0.85);
+            box-shadow: 0 0 0 3px rgba(244,67,54,0.10);
+            background: rgba(244,67,54,0.12);
+        }
+
+        .statusBox{
+            display:flex;
+            gap:8px;
+            align-items:center;
+            justify-content:space-between;
+            background: rgba(0,0,0,0.35);
+            border: 1px solid rgba(255,255,255,0.10);
+            border-radius: 10px;
+            padding:8px 10px;
+            color:#ccc;
+            font-size:12px;
+        }
+
+        .statusLabel{
+            color: rgba(255,255,255,0.65);
+        }
+
+        .statusValue{
+            font-weight:bold;
+            letter-spacing:0.5px;
+        }
+
+        .statusDisabled{
+            opacity:0.4;
+        }
+
+        /* Bottom shortcut bar */
+        #shortcutBar{
+            position:fixed;
+            left:0;
+            right:0;
+            bottom:0;
+            padding: 8px 12px;
+            background: linear-gradient(to top, rgba(0,0,0,0.75), rgba(0,0,0,0.45));
+            border-top: 1px solid rgba(255,255,255,0.12);
+            color: #ccc;
+            font-size: 13px;
+            display:flex;
+            align-items:center;
+            gap: 10px;
+            z-index: 10;
+        }
+
+        #shortcuts{
+            flex: 1;
+            min-width: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: rgba(255,255,255,0.70);
+        }
+
+        .separator{
+            color: rgba(255,255,255,0.35);
+            font-weight:normal;
+            margin: 0 8px;
+        }
+
+        .statusBlock{
+            display:flex;
+            gap: 6px;
+            align-items:center;
+        }
+
+        .statusBlock .title{
+            color: rgba(255,255,255,0.55);
+            font-weight: 600;
+            letter-spacing:0.5px;
+        }
+
+        .statusBlock .value{
+            font-weight: 800;
+            letter-spacing:0.5px;
+        }
+
+        /* Erase All Modal */
+        .modalBackdrop{
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.65);
+            display:flex;
+            align-items:center;
+            justify-content:center;
+        }
+
+        .modal{
+            width: min(480px, calc(100vw - 24px));
+            background: rgba(16,16,16,0.95);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 14px;
+            box-shadow: 0 0 50px rgba(0,0,0,0.75);
+            padding: 14px;
+        }
+
+        .modal h3{
+            margin: 0 0 8px 0;
+            color:#eee;
+            letter-spacing:0.6px;
+        }
+
+        .modal p{
+            margin: 0;
+            color: rgba(255,255,255,0.72);
+            font-size: 13px;
+            line-height:1.35;
+        }
+
+        .modalButtons{
+            margin-top: 12px;
+            display:flex;
+            gap: 10px;
+        }
+
+        .modalButtons button{
+            flex:1;
+            margin-top:0;
+        }
+
+        .hidden{ display:none; }
+    </style>
+</head>
+<body>
+
+    <canvas id="game"></canvas>
+
+    <!-- Left UI Panel -->
+    <div id="ui">
+
+        <div class="section">
+            <h2>WORKSPACE</h2>
+
+            <label for="worldWidthInput">World Width (m)</label>
+            <input id="worldWidthInput" type="number" value="50" min="5" max="100" step="1">
+
+            <label for="worldHeightInput">World Height (m)</label>
+            <input id="worldHeightInput" type="number" value="50" min="5" max="100" step="1">
+
+            <label for="gridSizeSelect">Brush Size</label>
+            <select id="gridSizeSelect">
+                <option value="1">10 cm</option>
+                <option value="2">20 cm</option>
+                <option value="3">30 cm</option>
+            </select>
+
+            <div class="row">
+                <button id="applyWorldBtn" class="half">Apply</button>
+                <button id="saveLayoutBtn" class="half" title="Cmd/Ctrl + S">Save</button>
+            </div>
+
+            <label for="layoutLoader">Load Layout (.json)</label>
+            <input id="layoutLoader" type="file" accept="application/json">
+        </div>
+
+        <div class="section">
+            <h2>DRAWING</h2>
+
+            <div class="row">
+                <button id="paintBtn" class="half">Paint (P)</button>
+                <button id="eraseBtn" class="half">Erase (E)</button>
+            </div>
+
+            <label>Obstacle Color</label>
+            <input id="colorPicker" type="color" value="#777777">
+
+            <label>Drawing Opacity</label>
+            <input id="drawingOpacitySlider" type="range" min="0" max="1" step="0.01" value="1">
+            <input id="drawingOpacityNumber" type="number" min="0" max="1" step="0.01" value="1">
+
+            <div class="row">
+                <button id="eraseAllBtn" class="half" style="border-color: rgba(244,67,54,0.65);">Erase All</button>
+                <button id="resetVehicleBtn" class="half">Reset Car (R)</button>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>BACKGROUND</h2>
+
+            <label for="imageLoader">Plan Image</label>
+            <input id="imageLoader" type="file" accept="image/*">
+
+            <label>Scale</label>
+            <input id="scaleSlider" type="range" min="0.1" max="3" step="0.01" value="1">
+            <input id="scaleNumber" type="number" min="0.1" max="3" step="0.01" value="1">
+
+            <label>Background Opacity</label>
+            <input id="opacitySlider" type="range" min="0" max="1" step="0.01" value="0.5">
+            <input id="opacityNumber" type="number" min="0" max="1" step="0.01" value="0.5">
+
+            <label>Grid Opacity</label>
+            <input id="gridOpacitySlider" type="range" min="0" max="1" step="0.01" value="0.2">
+            <input id="gridOpacityNumber" type="number" min="0" max="1" step="0.01" value="0.2">
+        </div>
+
+        <div class="section">
+            <h2>VEHICLE</h2>
+
+            <label>Car Color</label>
+            <input id="carColorPicker" type="color" value="#ff4444">
+
+            <label for="wheelbaseInput">Wheelbase (m)</label>
+            <input id="wheelbaseInput" type="number" value="2.6" min="1.8" max="4" step="0.01">
+
+            <label for="frontOverhangInput">Front Overhang (m)</label>
+            <input id="frontOverhangInput" type="number" value="0.9" min="0" max="2" step="0.01">
+
+            <label for="rearOverhangInput">Rear Overhang (m)</label>
+            <input id="rearOverhangInput" type="number" value="0.8" min="0" max="2" step="0.01">
+
+            <label for="trackWidthInput">Track Width (m)</label>
+            <input id="trackWidthInput" type="number" value="1.55" min="1" max="2.5" step="0.01">
+
+            <label for="bodyWidthInput">Body Width (m)</label>
+            <input id="bodyWidthInput" type="number" value="1.80" min="1.4" max="2.5" step="0.01">
+
+            <label for="turningCircleInput">Turning Circle (m)</label>
+            <input id="turningCircleInput" type="number" value="10.8" min="6" max="20" step="0.1">
+
+            <label>Top Speed (m/s)</label>
+            <input id="topSpeedSlider" type="range" min="1" max="30" step="1" value="8">
+            <input id="topSpeedNumber" type="number" min="1" max="30" step="1" value="8">
+
+            <label>Acceleration (m/s²)</label>
+            <input id="accelerationSlider" type="range" min="1" max="20" step="1" value="4">
+            <input id="accelerationNumber" type="number" min="1" max="20" step="1" value="4">
+
+            <div class="row">
+                <button id="applyCarBtn" class="half">Apply Car</button>
+                <button id="freeCameraBtn" class="half" title="Free camera" disabled>Camera: Free</button>
+            </div>
+
+            <button id="followCameraBtn" title="Follow camera" disabled>Camera: Follow</button>
+
+            <div style="margin-top:10px;">
+                <div class="statusBox">
+                    <div>
+                        <div class="statusLabel">Total Length</div>
+                        <div id="lengthStat" class="statusValue"></div>
+                    </div>
+                    <div>
+                        <div class="statusLabel">Body Width</div>
+                        <div id="widthStat" class="statusValue"></div>
+                    </div>
+                </div>
+
+                <div class="statusBox" style="margin-top:8px;">
+                    <div>
+                        <div class="statusLabel">Wheelbase</div>
+                        <div id="wheelbaseStat" class="statusValue"></div>
+                    </div>
+                    <div>
+                        <div class="statusLabel">Max Steering</div>
+                        <div id="turningStat" class="statusValue"></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="section" style="margin-bottom:0;">
+            <div class="row">
+                <button id="playModeBtn" class="half" title="Edit/Play toggle">Mode: Edit (M)</button>
+                <button id="cameraToggleBtn" class="half" title="Free/Follow toggle" disabled>Camera: Free (C)</button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Bottom shortcut HUD -->
+    <div id="shortcutBar">
+        <div id="shortcuts">
+            M: Mode toggle
+            <span class="separator">|</span>
+            C: Camera toggle
+            <span class="separator">|</span>
+            P/E/I: Paint / Erase / Eyedropper
+            <span class="separator">|</span>
+            Cmd/Ctrl+Z → Undo
+            <span class="separator">|</span>
+            Cmd/Ctrl+Shift+Z → Redo
+            <span class="separator">|</span>
+            Cmd/Ctrl+S → Save layout
+            <span class="separator">|</span>
+            Esc → Cancel Eyedropper
+            <span class="separator">|</span>
+            Shift+drag: Axis lock
+            <span class="separator">|</span>
+            Shift+click: Straight line
+            <span class="separator">|</span>
+            Wheel zoom
+            <span class="separator">|</span>
+            Middle mouse pan
+        </div>
+
+        <div class="statusBlock">
+            <span class="title">MODE</span>
+            <span id="modeStatus" class="value">EDIT</span>
+        </div>
+
+        <div class="statusBlock">
+            <span class="title">CAMERA</span>
+            <span id="cameraStatus" class="value statusDisabled">FREE</span>
+        </div>
+    </div>
+
+    <!-- Erase All Confirmation Modal -->
+    <div id="eraseConfirmModal" class="hidden modalBackdrop">
+        <div class="modal">
+            <h3>Erase All</h3>
+            <p>
+                Αυτό θα διαγράψει όλα τα obstacles στο grid.
+                Θέλεις σίγουρα να συνεχίσεις;
+            </p>
+
+            <div class="modalButtons">
+                <button id="cancelEraseBtn">Cancel</button>
+                <button id="confirmEraseBtn" style="border-color: rgba(244,67,54,0.65);">Yes, Erase</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+
+    <script>
+        // Save button just calls exportLayout
+        document.getElementById("saveLayoutBtn").addEventListener("click", function(){
+            exportLayout();
+        });
+
+        // edit/play buttons
+        document.getElementById("playModeBtn").addEventListener("click", function(){
+            if(mode === "edit") setMode("play");
+            else setMode("edit");
+        });
+
+        document.getElementById("cameraToggleBtn").addEventListener("click", function(){
+            if(mode !== "play") return;
+            if(cameraMode === "free") cameraMode = "follow";
+            else cameraMode = "free";
+            updateStatusBar();
+        });
+
+        // keep buttons in sync with status bar
+        function updateButtons(){
+            const playBtn = document.getElementById("playModeBtn");
+            const cameraBtn = document.getElementById("cameraToggleBtn");
+
+            if(mode === "edit"){
+                playBtn.textContent = "Mode: Edit (M)";
+                cameraBtn.disabled = true;
+                cameraBtn.textContent = "Camera: Free (C)";
+            } else {
+                playBtn.textContent = "Mode: Play (M)";
+                cameraBtn.disabled = false;
+                cameraBtn.textContent = `Camera: ${cameraMode === "free" ? "Free" : "Follow"} (C)`;
+            }
+        }
+
+        const originalUpdateStatusBar = updateStatusBar;
+        updateStatusBar = function(){
+            originalUpdateStatusBar();
+            updateButtons();
+        };
+
+        updateButtons();
+    </script>
+
+</body>
+</html>

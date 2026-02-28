@@ -1555,6 +1555,19 @@ function drawDrawing(){
 }
 
 // ===== DRAW CAR =====
+function drawDashedLineLocal(x1, y1, x2, y2, dashPx = 10, gapPx = 6, lineWidthPx = 2, color = "rgba(255,255,255,0.8)") {
+    ctx.save();
+    ctx.setLineDash([dashPx, gapPx]);
+    ctx.lineWidth = lineWidthPx;
+    ctx.strokeStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+    ctx.setLineDash([]); // reset
+    ctx.restore();
+}
+
 function roundedRectPath(x, y, w, h, r){
     // clamp radius
     r = Math.max(0, Math.min(r, Math.min(w, h) / 2));
@@ -1624,11 +1637,33 @@ function drawCar(){
     ctx.stroke();
     ctx.restore();
 
-    // ===== Rear Axle Debug Dot (optional) =====
+    // ===== Rear Axle Debug Dot (world size) =====
+    const dotM = 0.06;         // 6cm
+    const dotR = dotM * zoom;  // σε pixels
+
     ctx.fillStyle = "#ffffff";
     ctx.beginPath();
-    ctx.arc(0, 0, 1, 0, Math.PI * 2);
+    ctx.arc(0, 0, dotR, 0, Math.PI * 2);
     ctx.fill();
+
+    // ===== Dashed debug axes (track width + wheelbase) =====
+    const halfTrackPx = (car.trackWidth / 2) * zoom;
+    const wheelbasePx = car.wheelBase * zoom;
+
+    // Dash/GAP σε ΜΕΤΡΑ (world space)
+    const dashM = 0.1;   // 30 cm παύλα
+    const gapM  = 0.06;   // 20 cm κενό
+
+    // Μετατροπή σε px (camera zoom)
+    const dashPx = Math.max(2, dashM * zoom);
+    const gapPx  = Math.max(2, gapM  * zoom);
+
+    // πάχος γραμμής (άστο όπως θες — δεν είναι το θέμα)
+    const lw = Math.max(1, 0.03 * zoom);
+
+    drawDashedLineLocal(-halfTrackPx, 0, halfTrackPx, 0, dashPx, gapPx, lw, "rgb(255, 255, 255)");
+    drawDashedLineLocal(0, 0, 0, wheelbasePx, dashPx, gapPx, lw, "rgb(255, 255, 255)");
+    drawDashedLineLocal(-halfTrackPx, wheelbasePx, halfTrackPx, wheelbasePx, dashPx, gapPx, lw, "rgb(255, 255, 255)");
 
     // ===== Wheels =====
     const halfTrack = car.trackWidth / 2;

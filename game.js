@@ -1555,6 +1555,45 @@ function drawDrawing(){
 }
 
 // ===== DRAW CAR =====
+function drawDashedLineLocal(x1, y1, x2, y2, dashPx = 10, gapPx = 6, lineWidthPx = 2, color = "rgba(255,255,255,0.8)") {
+    ctx.save();
+    ctx.setLineDash([dashPx, gapPx]);
+    ctx.lineWidth = lineWidthPx;
+    ctx.strokeStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+    ctx.setLineDash([]); // reset
+    ctx.restore();
+}
+
+function roundedRectPath(x, y, w, h, r){
+    // clamp radius
+    r = Math.max(0, Math.min(r, Math.min(w, h) / 2));
+
+    // Path only (NO fill/stroke here)
+    ctx.beginPath();
+
+    // Native if available
+    if (typeof ctx.roundRect === "function") {
+        ctx.roundRect(x, y, w, h, r);
+        return;
+    }
+
+    // Fallback: manual path
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+}
+
 function drawCar(){
 
     ctx.save();
@@ -1572,23 +1611,59 @@ function drawCar(){
     const rearPx   = RO * zoom;
     const frontPx  = (WB + FO) * zoom;
 
-    // ===== Body =====
+    // ===== Body (rounded + outline) =====
+    const bodyX = -widthPx / 2;
+    const bodyY = -rearPx;
+    const bodyW = widthPx;
+    const bodyH = rearPx + frontPx;
+
+    // ΣΤΑΘΕΡΟ roundness (σε px) — δένει με zoom για να φαίνεται “ίδιο” σε scale
+    const bodyRadiusPx = 0.1 * zoom;     // δοκίμασε 0.10–0.18
+
+    roundedRectPath(bodyX, bodyY, bodyW, bodyH, bodyRadiusPx);
+
+    // fill (το χρώμα που διαλέγει ο χρήστης)
     ctx.fillStyle = car.color;
-
-    ctx.beginPath();
-    ctx.rect(
-        -widthPx / 2,
-        -rearPx,
-        widthPx,
-        rearPx + frontPx
-    );
+    ctx.globalAlpha = 1;
     ctx.fill();
 
-    // ===== Rear Axle Debug Dot (optional) =====
-    ctx.fillStyle = "yellow";
+    // ΣΤΑΘΕΡΟ outline (ελαφρύ)
+    ctx.save();
+    ctx.globalAlpha = 1;               // πόσο “ελαφρύ” (0.15–0.35)
+    ctx.strokeStyle = "#ffffff";          // ή π.χ. "rgba(255,255,255,0.25)" αν θες χωρίς globalAlpha
+    ctx.lineWidth = Math.max(1, 0.02 * zoom); // scale με zoom (ή βάλ’ το σκέτο 2 για σταθερό px)
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
+    ctx.stroke();
+    ctx.restore();
+
+    // ===== Rear Axle Debug Dot (world size) =====
+    const dotM = 0.06;         // 6cm
+    const dotR = dotM * zoom;  // σε pixels
+
+    ctx.fillStyle = "#ffffff";
     ctx.beginPath();
-    ctx.arc(0, 0, 4, 0, Math.PI * 2);
+    ctx.arc(0, 0, dotR, 0, Math.PI * 2);
     ctx.fill();
+
+    // ===== Dashed debug axes (track width + wheelbase) =====
+    const halfTrackPx = (car.trackWidth / 2) * zoom;
+    const wheelbasePx = car.wheelBase * zoom;
+
+    // Dash/GAP σε ΜΕΤΡΑ (world space)
+    const dashM = 0.1;   // 30 cm παύλα
+    const gapM  = 0.06;   // 20 cm κενό
+
+    // Μετατροπή σε px (camera zoom)
+    const dashPx = Math.max(2, dashM * zoom);
+    const gapPx  = Math.max(2, gapM  * zoom);
+
+    // πάχος γραμμής (άστο όπως θες — δεν είναι το θέμα)
+    const lw = Math.max(1, 0.03 * zoom);
+
+    drawDashedLineLocal(-halfTrackPx, 0, halfTrackPx, 0, dashPx, gapPx, lw, "rgb(255, 255, 255)");
+    drawDashedLineLocal(0, 0, 0, wheelbasePx, dashPx, gapPx, lw, "rgb(255, 255, 255)");
+    drawDashedLineLocal(-halfTrackPx, wheelbasePx, halfTrackPx, wheelbasePx, dashPx, gapPx, lw, "rgb(255, 255, 255)");
 
     // ===== Wheels =====
     const halfTrack = car.trackWidth / 2;
@@ -1608,17 +1683,26 @@ function drawWheel(localX, localY, steerAngle){
     ctx.translate(localX * zoom, localY * zoom);
     ctx.rotate(steerAngle);
 
-    ctx.fillStyle = "#111";
+    const wheelWidth  = 0.35 * zoom;
+    const wheelLength = 0.7 * zoom;
+    const radius = 0.05 * zoom;
 
-    const wheelWidth  = 0.25 * zoom;
-    const wheelLength = 0.6 * zoom;
-
-    ctx.fillRect(
+    roundedRectPath(
         -wheelWidth / 2,
         -wheelLength / 2,
         wheelWidth,
-        wheelLength
+        wheelLength,
+        radius
     );
+
+    ctx.fillStyle = "#111";
+    ctx.fill();
+
+    ctx.lineWidth = Math.max(1, 0.02 * zoom);
+    ctx.strokeStyle = "#ffffff";
+    ctx.globalAlpha = 1;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
 
     ctx.restore();
 }

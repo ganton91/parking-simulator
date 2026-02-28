@@ -1541,12 +1541,19 @@ function drawDrawing(){
 
         ctx.fillStyle = grid[y][x];
 
-        ctx.fillRect(
-          x * cellSizeMeters * zoom,
-          y * cellSizeMeters * zoom,
-          cellSizeMeters * zoom,
-          cellSizeMeters * zoom
-        );
+            const px = x * cellSizeMeters * zoom;
+            const py = y * cellSizeMeters * zoom;
+            const s  = cellSizeMeters * zoom;
+
+            // μικρό overlap για να μη φαίνονται seams
+            const pad = 0.5; // px (δοκίμασε 0.5 ή 1)
+
+            ctx.fillRect(
+            px - pad,
+            py - pad,
+            s + pad * 2,
+            s + pad * 2
+            );
 
         ctx.restore();
       }

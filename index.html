@@ -21,10 +21,10 @@ body{
     bottom:40px;              /* 👈 αυτό είναι το κλειδί */
     background: rgba(20,20,20,1);
     padding:15px;
-    border-radius:1px;
-    border: 1px solid rgb(118, 118, 118);
+    border-radius:8px;
+    border: 1px solid rgb(255, 255, 255);
     width:min(300px, 90vw);
-
+    box-shadow: 0 6px 20px rgba(0,0,0,0.35);
     overflow-y:auto;
 }
 
@@ -224,7 +224,7 @@ select:disabled{
 }
 
 #visibilityToggles .toggleBtn{
-    width: auto;             /* για να μην παίρνει width:100% από το global button rule */
+    min-width: 100px;             /* για να μην παίρνει width:100% από το global button rule */
     padding: 8px 10px;
     border-radius: 20px;
     background: rgba(20,20,20,1);

@@ -1468,7 +1468,7 @@ function resetVehicle(){
 }
 
 // ===== DRAW GRID =====
-function drawGrid(){
+function drawGridLines(){
 
     const worldWidthPx = worldWidthMeters * zoom;
     const worldHeightPx = worldHeightMeters * zoom;
@@ -1526,28 +1526,32 @@ function drawGrid(){
         ctx.lineTo(worldWidthPx, y * zoom);
         ctx.stroke();
     }
+}
 
-    // ===== walls =====
-    for(let y=0; y<cellsY; y++){
-        for(let x=0; x<cellsX; x++){
-            if(grid[y][x] !== 0){
+// ===== DRAW OBSTACLES =====
+function drawDrawing(){
 
-                ctx.save();
-                ctx.globalAlpha = drawingOpacity;
+  for(let y=0; y<cellsY; y++){
+    for(let x=0; x<cellsX; x++){
 
-                ctx.fillStyle = grid[y][x];
+      if(grid[y][x] !== 0){
 
-                ctx.fillRect(
-                    x * cellSizeMeters * zoom,
-                    y * cellSizeMeters * zoom,
-                    cellSizeMeters * zoom,
-                    cellSizeMeters * zoom
-                );
+        ctx.save();
+        ctx.globalAlpha = drawingOpacity;
 
-                ctx.restore();
-            }
-        }
+        ctx.fillStyle = grid[y][x];
+
+        ctx.fillRect(
+          x * cellSizeMeters * zoom,
+          y * cellSizeMeters * zoom,
+          cellSizeMeters * zoom,
+          cellSizeMeters * zoom
+        );
+
+        ctx.restore();
+      }
     }
+  }
 }
 
 // ===== DRAW CAR =====
@@ -1759,7 +1763,8 @@ function draw(){
         ctx.restore();
     }
 
-    if(showGrid) drawGrid();
+    if(showGrid) drawGridLines();
+    if(showDrawing) drawDrawing();
     if(showVehicle) drawCar();
 
     // ===== BRUSH PREVIEW =====
@@ -1842,6 +1847,7 @@ const uiPanel = document.getElementById("ui");
 const toggleUIBtn        = document.getElementById("toggleUIBtn");
 const toggleRulerBtn     = document.getElementById("toggleRulerBtn");
 const toggleGridBtn      = document.getElementById("toggleGridBtn");
+const toggleDrawingBtn  = document.getElementById("toggleDrawingBtn");
 const toggleBgBtn        = document.getElementById("toggleBgBtn");
 const toggleVehicleBtn   = document.getElementById("toggleVehicleBtn");
 
@@ -1855,6 +1861,7 @@ function applyVisibility(){
     if(toggleUIBtn)      toggleUIBtn.textContent = showUI ? "Hide UI" : "Show UI";
     if(toggleRulerBtn)   toggleRulerBtn.textContent = showRuler ? "Hide Ruler" : "Show Ruler";
     if(toggleGridBtn)    toggleGridBtn.textContent = showGrid ? "Hide Grid" : "Show Grid";
+    if(toggleDrawingBtn) toggleDrawingBtn.textContent = showDrawing ? "Hide Drawing" : "Show Drawing";
     if(toggleBgBtn)      toggleBgBtn.textContent = showBackground ? "Hide BG" : "Show BG";
     if(toggleVehicleBtn) toggleVehicleBtn.textContent = showVehicle ? "Hide Vehicle" : "Show Vehicle";
 }
@@ -1879,6 +1886,13 @@ if(toggleGridBtn){
         showGrid = !showGrid;
         applyVisibility();
     });
+}
+
+if(toggleDrawingBtn){
+  toggleDrawingBtn.addEventListener("click", () => {
+    showDrawing = !showDrawing;
+    applyVisibility();
+  });
 }
 
 if(toggleBgBtn){

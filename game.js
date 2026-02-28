@@ -10,6 +10,14 @@ let dragStartCell = null;
 let justDidShiftLine = false;
 let lastPaintedCell = null;
 
+// ===== VISIBILITY FLAGS =====
+let showUI = true;
+let showRuler = true;
+let showGrid = true;
+let showDrawing = true;
+let showBackground = true;
+let showVehicle = true;
+
 // ===== UNDO / REDO =====
 let undoStack = [];
 let redoStack = [];
@@ -47,16 +55,24 @@ function updateUIOffsets(){
 
     const ui = document.getElementById("ui");
     const shortcutBar = document.getElementById("shortcutBar");
+    const visibilityToggles = document.getElementById("visibilityToggles");
 
-    if(!ui || !shortcutBar) return;
+    if(!shortcutBar) return;
 
-    const rulerHeightPx = 35; // must match drawTopRuler() rulerHeight
-    const paddingPx = 10;     // breathing room
-
+    const rulerHeightPx = 35; // ίδιο με drawTopRuler()
+    const paddingPx = 10;
     const footerHeightPx = shortcutBar.offsetHeight;
 
-    ui.style.top = (rulerHeightPx + paddingPx) + "px";
-    ui.style.bottom = (footerHeightPx + paddingPx) + "px";
+    // Main left UI
+    if(ui){
+        ui.style.top = (rulerHeightPx + paddingPx) + "px";
+        ui.style.bottom = (footerHeightPx + paddingPx) + "px";
+    }
+
+    // Bottom-right visibility toggles
+    if(visibilityToggles){
+        visibilityToggles.style.bottom = (footerHeightPx + paddingPx) + "px";
+    }
 }
 
 // ===== WORLD SETTINGS =====
@@ -1452,7 +1468,7 @@ function resetVehicle(){
 }
 
 // ===== DRAW GRID =====
-function drawGrid(){
+function drawGridLines(){
 
     const worldWidthPx = worldWidthMeters * zoom;
     const worldHeightPx = worldHeightMeters * zoom;
@@ -1510,28 +1526,32 @@ function drawGrid(){
         ctx.lineTo(worldWidthPx, y * zoom);
         ctx.stroke();
     }
+}
 
-    // ===== walls =====
-    for(let y=0; y<cellsY; y++){
-        for(let x=0; x<cellsX; x++){
-            if(grid[y][x] !== 0){
+// ===== DRAW OBSTACLES =====
+function drawDrawing(){
 
-                ctx.save();
-                ctx.globalAlpha = drawingOpacity;
+  for(let y=0; y<cellsY; y++){
+    for(let x=0; x<cellsX; x++){
 
-                ctx.fillStyle = grid[y][x];
+      if(grid[y][x] !== 0){
 
-                ctx.fillRect(
-                    x * cellSizeMeters * zoom,
-                    y * cellSizeMeters * zoom,
-                    cellSizeMeters * zoom,
-                    cellSizeMeters * zoom
-                );
+        ctx.save();
+        ctx.globalAlpha = drawingOpacity;
 
-                ctx.restore();
-            }
-        }
+        ctx.fillStyle = grid[y][x];
+
+        ctx.fillRect(
+          x * cellSizeMeters * zoom,
+          y * cellSizeMeters * zoom,
+          cellSizeMeters * zoom,
+          cellSizeMeters * zoom
+        );
+
+        ctx.restore();
+      }
     }
+  }
 }
 
 // ===== DRAW CAR =====
@@ -1715,7 +1735,7 @@ function draw(){
     ctx.translate(cameraX, cameraY);
 
     // ===== DRAW BACKGROUND PLAN (centered) =====
-    if(backgroundImage){
+    if(showBackground && backgroundImage){
 
         ctx.save();
         ctx.globalAlpha = bgOpacity;
@@ -1743,8 +1763,9 @@ function draw(){
         ctx.restore();
     }
 
-    drawGrid();
-    drawCar();
+    if(showGrid) drawGridLines();
+    if(showDrawing) drawDrawing();
+    if(showVehicle) drawCar();
 
     // ===== BRUSH PREVIEW =====
     if(mode === "edit" && (paintMode === "paint" || paintMode === "erase")){
@@ -1786,7 +1807,7 @@ function draw(){
 
     ctx.restore();
 
-    drawTopRuler();
+    if(showRuler) drawTopRuler();
 }
 
 // ===== LOOP =====
@@ -1819,6 +1840,77 @@ document.getElementById("followCameraBtn")
         console.log("Camera Mode:", cameraMode);
         updateStatusBar();
     });
+
+// ===== VISIBILITY TOGGLES =====
+const uiPanel = document.getElementById("ui");
+
+const toggleUIBtn        = document.getElementById("toggleUIBtn");
+const toggleRulerBtn     = document.getElementById("toggleRulerBtn");
+const toggleGridBtn      = document.getElementById("toggleGridBtn");
+const toggleDrawingBtn  = document.getElementById("toggleDrawingBtn");
+const toggleBgBtn        = document.getElementById("toggleBgBtn");
+const toggleVehicleBtn   = document.getElementById("toggleVehicleBtn");
+
+function applyVisibility(){
+    // UI panel
+    if(uiPanel){
+        uiPanel.style.display = showUI ? "block" : "none";
+    }
+
+    // Update button labels (αν υπάρχουν)
+    if(toggleUIBtn)      toggleUIBtn.textContent = showUI ? "Hide UI" : "Show UI";
+    if(toggleRulerBtn)   toggleRulerBtn.textContent = showRuler ? "Hide Ruler" : "Show Ruler";
+    if(toggleGridBtn)    toggleGridBtn.textContent = showGrid ? "Hide Grid" : "Show Grid";
+    if(toggleDrawingBtn) toggleDrawingBtn.textContent = showDrawing ? "Hide Drawing" : "Show Drawing";
+    if(toggleBgBtn)      toggleBgBtn.textContent = showBackground ? "Hide BG" : "Show BG";
+    if(toggleVehicleBtn) toggleVehicleBtn.textContent = showVehicle ? "Hide Vehicle" : "Show Vehicle";
+}
+
+// Button events
+if(toggleUIBtn){
+    toggleUIBtn.addEventListener("click", () => {
+        showUI = !showUI;
+        applyVisibility();
+    });
+}
+
+if(toggleRulerBtn){
+    toggleRulerBtn.addEventListener("click", () => {
+        showRuler = !showRuler;
+        applyVisibility();
+    });
+}
+
+if(toggleGridBtn){
+    toggleGridBtn.addEventListener("click", () => {
+        showGrid = !showGrid;
+        applyVisibility();
+    });
+}
+
+if(toggleDrawingBtn){
+  toggleDrawingBtn.addEventListener("click", () => {
+    showDrawing = !showDrawing;
+    applyVisibility();
+  });
+}
+
+if(toggleBgBtn){
+    toggleBgBtn.addEventListener("click", () => {
+        showBackground = !showBackground;
+        applyVisibility();
+    });
+}
+
+if(toggleVehicleBtn){
+    toggleVehicleBtn.addEventListener("click", () => {
+        showVehicle = !showVehicle;
+        applyVisibility();
+    });
+}
+
+// Run once on load
+applyVisibility();
 
 updateToolUI();
 updateRemoveBgButton();

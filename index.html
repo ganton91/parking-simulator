@@ -19,12 +19,12 @@ body{
     left:10px;
     top:50px;
     bottom:40px;              /* 👈 αυτό είναι το κλειδί */
-    background:#111;
+    background: rgba(20,20,20,1);
     padding:15px;
     border-radius:8px;
-
+    border: 1px solid rgb(255, 255, 255);
     width:min(300px, 90vw);
-
+    box-shadow: 0 6px 20px rgba(0,0,0,0.35);
     overflow-y:auto;
 }
 
@@ -213,6 +213,36 @@ select:disabled{
     cursor: not-allowed;
 }
 
+#visibilityToggles{
+    position: fixed;
+    right: 12px;
+    bottom: 40px;            /* θα το διορθώσουμε από JS για να κάθεται ΠΑΝΩ από το shortcut bar */
+    z-index: 6000;           /* πάνω από shortcut bar (5000) αλλά κάτω από modal (9999) */
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+#visibilityToggles .toggleBtn{
+    min-width: 100px;             /* για να μην παίρνει width:100% από το global button rule */
+    padding: 8px 10px;
+    border-radius: 20px;
+    background: rgba(20,20,20,1);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,1);
+    cursor: pointer;
+    font-size: 12px;
+}
+
+#visibilityToggles .toggleBtn.isOff{
+    opacity: 0.55;
+}
+
+#visibilityToggles button{
+    box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+    transition: all 0.15s ease;
+}
+
 </style>
 
 </head>
@@ -221,7 +251,6 @@ select:disabled{
 
 <div id="ui">
 
-<hr>
 <h3>Background Image</h3>
 
 <input type="file" id="imageLoader" accept="image/png, image/jpeg">
@@ -377,6 +406,16 @@ select:disabled{
   <span><b>Mouse Wheel</b>:Zoom In/Out</span>
   <span><b>Middle Mouse+Drag</b>:Pan</span>
 
+</div>
+
+<!-- ===== VISIBILITY TOGGLES (bottom-right) ===== -->
+<div id="visibilityToggles">
+  <button id="toggleUIBtn" class="toggleBtn">Hide UI</button>
+  <button id="toggleRulerBtn" class="toggleBtn">Hide Ruler</button>
+  <button id="toggleGridBtn" class="toggleBtn">Hide Grid</button>
+  <button id="toggleDrawingBtn" class="toggleBtn">Hide Drawing</button>
+  <button id="toggleBgBtn" class="toggleBtn">Hide Background</button>
+  <button id="toggleVehicleBtn" class="toggleBtn">Hide Vehicle</button>
 </div>
 
 <!-- ===== GENERIC CONFIRM MODAL ===== -->

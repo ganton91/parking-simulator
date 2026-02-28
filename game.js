@@ -425,9 +425,21 @@ document.getElementById("layoutLoader").addEventListener("change", function(e){
             const img = new Image();
             img.onload = function(){
                 backgroundImage = img;
+                updateRemoveBgButton(); // ✅ enable μετά το import
             };
 
             img.src = bgImageBase64;
+
+        } else {
+
+            // ✅ αν το layout ΔΕΝ έχει background, καθάρισε ό,τι υπάρχει
+            backgroundImage = null;
+            bgImageBase64 = null;
+
+            const loader = document.getElementById("imageLoader");
+            if(loader) loader.value = "";
+
+            updateRemoveBgButton(); // ✅ disable
         }
 
         // Restore grid opacity
@@ -1000,10 +1012,43 @@ document.getElementById("imageLoader").addEventListener("change", function(e){
 
         backgroundImage = new Image();
         backgroundImage.src = bgImageBase64;   // χρησιμοποιούμε το ίδιο string
+
+        updateRemoveBgButton();
     };
 
     reader.readAsDataURL(e.target.files[0]);
 });
+
+// ===== REMOVE BACKGROUND IMAGE =====
+const removeBgBtn = document.getElementById("removeBgBtn");
+
+function updateRemoveBgButton(){
+    if(!removeBgBtn) return;
+    removeBgBtn.disabled = !(backgroundImage && bgImageBase64);
+}
+
+if(removeBgBtn){
+    removeBgBtn.addEventListener("click", function(){
+
+        openConfirmModal(
+            "Remove background image?",
+            "This will remove the background image from the canvas.",
+            function(){
+
+                // clear background
+                backgroundImage = null;
+                bgImageBase64 = null;
+
+                // clear file input
+                const loader = document.getElementById("imageLoader");
+                if(loader) loader.value = "";
+
+                updateRemoveBgButton();
+            }
+        );
+
+    });
+}
 
 // ===== BACKGROUND CONTROLS =====
 
@@ -1117,40 +1162,70 @@ function updateToolUI(){
     }
 }
 
-// ===== ERASE ALL (opens confirmation modal) =====
-const eraseAllBtn = document.getElementById("eraseAllBtn");
-const eraseConfirmModal = document.getElementById("eraseConfirmModal");
+// ===== GENERIC CONFIRM MODAL =====
+const confirmModal   = document.getElementById("confirmModal");
+const confirmTitle   = document.getElementById("confirmTitle");
+const confirmText    = document.getElementById("confirmText");
+const confirmYesBtn  = document.getElementById("confirmYesBtn");
+const confirmNoBtn   = document.getElementById("confirmNoBtn");
 
-eraseAllBtn.addEventListener("click", function(){
-    eraseConfirmModal.classList.remove("hidden");
-});
+let pendingConfirmAction = null;
 
-const confirmEraseBtn = document.getElementById("confirmEraseBtn");
-const cancelEraseBtn = document.getElementById("cancelEraseBtn");
+function openConfirmModal(title, text, onConfirm){
+    pendingConfirmAction = onConfirm;
 
-// CONFIRM → erase + close
-confirmEraseBtn.addEventListener("click", function(){
+    if(confirmTitle) confirmTitle.textContent = title || "Are you sure?";
+    if(confirmText)  confirmText.textContent  = text  || "Do you want to proceed?";
 
-    for(let y = 0; y < cellsY; y++){
-        for(let x = 0; x < cellsX; x++){
-            grid[y][x] = 0;
+    if(confirmModal) confirmModal.classList.remove("hidden");
+}
+
+function closeConfirmModal(){
+    pendingConfirmAction = null;
+    if(confirmModal) confirmModal.classList.add("hidden");
+}
+
+if(confirmYesBtn){
+    confirmYesBtn.addEventListener("click", function(){
+        if(typeof pendingConfirmAction === "function"){
+            pendingConfirmAction();
         }
-    }
+        closeConfirmModal();
+    });
+}
 
-    eraseConfirmModal.classList.add("hidden");
-});
+if(confirmNoBtn){
+    confirmNoBtn.addEventListener("click", closeConfirmModal);
+}
 
-// CANCEL → just close
-cancelEraseBtn.addEventListener("click", function(){
-    eraseConfirmModal.classList.add("hidden");
-});
-
-// ESC key closes modal
 document.addEventListener("keydown", function(e){
     if(e.key === "Escape"){
-        eraseConfirmModal.classList.add("hidden");
+        closeConfirmModal();
     }
 });
+
+// ===== ERASE ALL BUTTON (uses generic confirm modal) =====
+const eraseAllBtn = document.getElementById("eraseAllBtn");
+
+if (eraseAllBtn) {
+    eraseAllBtn.addEventListener("click", function(){
+
+        openConfirmModal(
+            "Erase everything?",
+            "This will clear all drawn obstacles from the grid.",
+            function(){
+
+                for(let y = 0; y < cellsY; y++){
+                    for(let x = 0; x < cellsX; x++){
+                        grid[y][x] = 0;
+                    }
+                }
+
+            }
+        );
+
+    });
+}
 
 // ===== COLLISION =====
 function checkCollision(x, y, angle){
@@ -1746,3 +1821,4 @@ document.getElementById("followCameraBtn")
     });
 
 updateToolUI();
+updateRemoveBgButton();

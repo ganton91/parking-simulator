@@ -534,6 +534,9 @@ function setMode(m){
 
         document.getElementById("freeCameraBtn").disabled = false;
         document.getElementById("followCameraBtn").disabled = false;
+
+        // focus the canvas so keyboard controls go to the game, not UI
+        canvas.focus();
     }
 
     updateStatusBar();
@@ -2010,3 +2013,21 @@ applyVisibility();
 
 updateToolUI();
 updateRemoveBgButton();
+
+// ===== PLAY MODE: keep keyboard focus on canvas even after UI clicks =====
+document.getElementById("ui").addEventListener("click", function(){
+    if(mode !== "play") return;
+
+    // allow text selection etc. if you ever need it; but for now keep focus on canvas
+    e.preventDefault();   // prevents focus from moving to UI controls
+    canvas.focus();
+});
+
+// ===== PLAY MODE: after any button click, return focus to canvas =====
+document.addEventListener("click", function(e){
+    if(mode !== "play") return;
+
+    const btn = e.target.closest("button");
+    if(!btn) return;
+    canvas.focus();
+});

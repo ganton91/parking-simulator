@@ -162,7 +162,7 @@ let zoom = 120; // pixels per meter (camera zoom)
 let mode = "edit";
 
 // ===== CAMERA MODE =====
-let cameraMode = "free"; // "free" or "follow"
+let cameraMode = "free"; // "free" | "follow" | "chase"
 let cameraRotationDeg = 0; // 0..360
 
 function unrotateScreenPoint(sx, sy){
@@ -351,6 +351,7 @@ function setUIEnabled(enabled){
     // Camera buttons are controlled separately
     document.getElementById("freeCameraBtn").disabled = true;
     document.getElementById("followCameraBtn").disabled = true;
+    document.getElementById("chaseCameraBtn").disabled = true;
 }
 
 // ===== EXPORT LAYOUT =====
@@ -574,8 +575,13 @@ function updateStatusBar(){
         if(cameraMode === "free"){
             cameraEl.textContent = "FREE";
             cameraEl.style.color = "#ff9800";
-        } else {
+        }
+        else if(cameraMode === "follow"){
             cameraEl.textContent = "FOLLOW";
+            cameraEl.style.color = "#4caf50";
+        }
+        else{
+            cameraEl.textContent = "CHASE";
             cameraEl.style.color = "#4caf50";
         }
     }
@@ -587,19 +593,21 @@ function setMode(m){
     mode = m;
 
     if(mode === "edit"){
-        setUIEnabled(true);   // unlock UI
+        setUIEnabled(true);
 
         document.getElementById("freeCameraBtn").disabled = true;
         document.getElementById("followCameraBtn").disabled = true;
-        cameraMode = "free"; // always free in edit
-    } 
+        document.getElementById("chaseCameraBtn").disabled = true;
+
+        cameraMode = "free";
+    }
     else if(mode === "play"){
-        setUIEnabled(false);  // lock UI
+        setUIEnabled(false);
 
         document.getElementById("freeCameraBtn").disabled = false;
         document.getElementById("followCameraBtn").disabled = false;
+        document.getElementById("chaseCameraBtn").disabled = false;
 
-        // focus the canvas so keyboard controls go to the game, not UI
         canvas.focus();
     }
 
@@ -1044,11 +1052,10 @@ document.addEventListener("keydown", function(e){
 
     // C → Toggle Camera (μόνο σε Play)
     if(key === "c" && mode === "play"){
-        if(cameraMode === "free"){
-            cameraMode = "follow";
-        } else {
-            cameraMode = "free";
-        }
+        if(cameraMode === "free") cameraMode = "follow";
+        else if(cameraMode === "follow") cameraMode = "chase";
+        else cameraMode = "free";
+
         console.log("Camera Mode:", cameraMode);
         updateStatusBar();
     }
@@ -1624,7 +1631,7 @@ function update(dt){
     }
 
     // ===== FOLLOW CAMERA CENTERING (GEOMETRIC CENTER) =====
-    if(cameraMode === "follow" && mode === "play"){
+    if((cameraMode === "follow" || cameraMode === "chase") && mode === "play"){
 
         const totalLength =
             car.rearOverhang +
@@ -1640,6 +1647,19 @@ function update(dt){
 
         cameraX = canvas.width / 2 - centerX * zoom;
         cameraY = canvas.height / 2 - centerY * zoom;
+    }
+
+    // ===== CHASE CAMERA AUTO-ROTATE (nose always up) =====
+    if(cameraMode === "chase" && mode === "play"){
+
+        // car.angle: 0 σημαίνει "πάνω" (λόγω του sin/cos που χρησιμοποιείς στο movement)
+        // Θέλουμε η κάμερα να αντιστρέφει τη γωνία του αμαξιού, ώστε το αμάξι να φαίνεται πάντα προς τα πάνω.
+        let deg = (-car.angle * 180 / Math.PI);
+
+        // normalize 0..360
+        deg = ((deg % 360) + 360) % 360;
+
+        setCameraRotation(deg); // ενημερώνει και slider/number
     }
 }
 
@@ -2135,6 +2155,13 @@ document.getElementById("freeCameraBtn")
 document.getElementById("followCameraBtn")
     .addEventListener("click", function(){
         cameraMode = "follow";
+        console.log("Camera Mode:", cameraMode);
+        updateStatusBar();
+    });
+
+document.getElementById("chaseCameraBtn")
+    .addEventListener("click", function(){
+        cameraMode = "chase";
         console.log("Camera Mode:", cameraMode);
         updateStatusBar();
     });

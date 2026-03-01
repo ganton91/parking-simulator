@@ -40,6 +40,13 @@ console.log("Parking Simulator Loaded");
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
+// ===== After moving any slider, return focus to canvas =====
+document.querySelectorAll('input[type="range"]').forEach(slider => {
+  slider.addEventListener("input", () => {
+    canvas.focus();
+  });
+});
+
 function resizeCanvas(){
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
@@ -156,6 +163,51 @@ let mode = "edit";
 
 // ===== CAMERA MODE =====
 let cameraMode = "free"; // "free" or "follow"
+let cameraRotationDeg = 0; // 0..360
+
+function unrotateScreenPoint(sx, sy){
+    // sx, sy: mouse position inside canvas (pixels)
+    if(cameraRotationDeg === 0){
+        return { x: sx, y: sy };
+    }
+
+    const rad = cameraRotationDeg * Math.PI / 180;
+    const pivot = getRotatePivotScreen();
+    const cx = pivot.x;
+    const cy = pivot.y;
+
+    const dx = sx - cx;
+    const dy = sy - cy;
+
+    const cos = Math.cos(rad);
+    const sin = Math.sin(rad);
+
+    // rotate by -rad (inverse)
+    const ux = cx + dx * cos + dy * sin;
+    const uy = cy - dx * sin + dy * cos;
+
+    return { x: ux, y: uy };
+}
+
+function screenToWorld(sx, sy){
+    // returns world coords in meters
+    const p = unrotateScreenPoint(sx, sy);
+    return {
+        x: (p.x - cameraX) / zoom,
+        y: (p.y - cameraY) / zoom
+    };
+}
+
+function getRotatePivotScreen(){
+  // pivot in SCREEN pixels
+  if(cameraMode === "follow"){
+    // στο follow, εσύ κεντράρεις το (centerX, centerY) στο κέντρο του canvas
+    // άρα pivot = κέντρο canvas
+    return { x: canvas.width / 2, y: canvas.height / 2 };
+  }
+  // free
+  return { x: canvas.width / 2, y: canvas.height / 2 };
+}
 
 // ===== CAR DATA =====
 
@@ -326,6 +378,7 @@ function exportLayout(){
         gridColor: gridColor,
         backgroundColor: backgroundColor,
         drawingOpacity: drawingOpacity,
+        rotateCameraDeg: cameraRotationDeg,
     };
 
     const json = JSON.stringify(saveData);
@@ -477,6 +530,14 @@ document.getElementById("layoutLoader").addEventListener("change", function(e){
             document.getElementById("drawingOpacitySlider").value = data.drawingOpacity;
             document.getElementById("drawingOpacityNumber").value = data.drawingOpacity;
         }
+
+        // Restore rotate camera degrees
+        if(data.rotateCameraDeg !== undefined){
+            cameraRotationDeg = data.rotateCameraDeg;
+
+            document.getElementById("rotateCameraSlider").value = data.rotateCameraDeg;
+            document.getElementById("rotateCameraNumber").value = data.rotateCameraDeg;
+        }
     };
 
     reader.readAsText(file);
@@ -598,8 +659,12 @@ function paintAtMouse(e){
 
     const rect = canvas.getBoundingClientRect();
 
-    const mx = (e.clientX - rect.left - cameraX) / zoom;
-    const my = (e.clientY - rect.top - cameraY) / zoom;
+    const sx = e.clientX - rect.left;
+    const sy = e.clientY - rect.top;
+
+    const w = screenToWorld(sx, sy);
+    const mx = w.x;
+    const my = w.y;
 
     const gx = Math.floor(mx / cellSizeMeters);
     const gy = Math.floor(my / cellSizeMeters);
@@ -651,8 +716,12 @@ canvas.addEventListener("mousedown", function(e){
 
         const rect = canvas.getBoundingClientRect();
 
-        const mx = (e.clientX - rect.left - cameraX) / zoom;
-        const my = (e.clientY - rect.top - cameraY) / zoom;
+        const sx = e.clientX - rect.left;
+        const sy = e.clientY - rect.top;
+
+        const w = screenToWorld(sx, sy);
+        const mx = w.x;
+        const my = w.y;
 
         const gx = Math.floor(mx / cellSizeMeters);
         const gy = Math.floor(my / cellSizeMeters);
@@ -692,8 +761,12 @@ canvas.addEventListener("mousedown", function(e){
     // Υπολογισμός grid cell
     const rect = canvas.getBoundingClientRect();
 
-    const mx = (e.clientX - rect.left - cameraX) / zoom;
-    const my = (e.clientY - rect.top - cameraY) / zoom;
+    const sx = e.clientX - rect.left;
+    const sy = e.clientY - rect.top;
+
+    const w = screenToWorld(sx, sy);
+    const mx = w.x;
+    const my = w.y;
 
     const gx = Math.floor(mx / cellSizeMeters);
     const gy = Math.floor(my / cellSizeMeters);
@@ -726,8 +799,12 @@ canvas.addEventListener("mousemove", function(e){
 
     const rect = canvas.getBoundingClientRect();
 
-    const mx = (e.clientX - rect.left - cameraX) / zoom;
-    const my = (e.clientY - rect.top - cameraY) / zoom;
+    const sx = e.clientX - rect.left;
+    const sy = e.clientY - rect.top;
+
+    const w = screenToWorld(sx, sy);
+    const mx = w.x;
+    const my = w.y;
 
     let gx = Math.floor(mx / cellSizeMeters);
     let gy = Math.floor(my / cellSizeMeters);
@@ -767,8 +844,12 @@ canvas.addEventListener("mouseup", function(e){
     // Υπολογισμός cell στο οποίο τελείωσε το drag
     const rect = canvas.getBoundingClientRect();
 
-    const mx = (e.clientX - rect.left - cameraX) / zoom;
-    const my = (e.clientY - rect.top - cameraY) / zoom;
+    const sx = e.clientX - rect.left;
+    const sy = e.clientY - rect.top;
+
+    const w = screenToWorld(sx, sy);
+    const mx = w.x;
+    const my = w.y;
 
     const gx = Math.floor(mx / cellSizeMeters);
     const gy = Math.floor(my / cellSizeMeters);
@@ -796,8 +877,12 @@ canvas.addEventListener("mouseleave", function(e){
 
     const rect = canvas.getBoundingClientRect();
 
-    const mx = (e.clientX - rect.left - cameraX) / zoom;
-    const my = (e.clientY - rect.top - cameraY) / zoom;
+    const sx = e.clientX - rect.left;
+    const sy = e.clientY - rect.top;
+
+    const w = screenToWorld(sx, sy);
+    const mx = w.x;
+    const my = w.y;
 
     const gx = Math.floor(mx / cellSizeMeters);
     const gy = Math.floor(my / cellSizeMeters);
@@ -814,8 +899,46 @@ canvas.addEventListener("mouseleave", function(e){
 
 // ===== CONTROLS =====
 const keys = {};
-document.addEventListener("keydown", e=>keys[e.key]=true);
-document.addEventListener("keyup", e=>keys[e.key]=false);
+
+document.addEventListener("keydown", e => {
+
+  const el = document.activeElement;
+  const tag = el ? el.tagName.toLowerCase() : "";
+
+  const isTyping =
+    tag === "input" ||
+    tag === "textarea" ||
+    tag === "select" ||
+    (el && el.isContentEditable);
+
+  // 🔁 Enter / Escape επιστρέφει focus ΠΑΝΤΑ
+  if (isTyping && (e.key === "Escape" || e.key === "Enter")) {
+    e.preventDefault();
+    canvas.focus();
+    return;
+  }
+
+  // 🚗 Block driving controls μόνο στο play
+  if (mode === "play" && isTyping) return;
+
+  keys[e.key] = true;
+});
+
+document.addEventListener("keyup", e => {
+
+  const el = document.activeElement;
+  const tag = el ? el.tagName.toLowerCase() : "";
+
+  const isTyping =
+    tag === "input" ||
+    tag === "textarea" ||
+    tag === "select" ||
+    (el && el.isContentEditable);
+
+  if (mode === "play" && isTyping) return;
+
+  keys[e.key] = false;
+});
 
 // ===== KEYBOARD SHORTCUTS =====
 document.addEventListener("keydown", function(e){
@@ -982,32 +1105,40 @@ let isDragging = false;
 let lastMouseX = 0;
 let lastMouseY = 0;
 
-canvas.addEventListener("mousedown", e=>{
+canvas.addEventListener("mousedown", e => {
+  // Only middle mouse button (wheel)
+  if (e.button !== 1) return;
 
-    // Only middle mouse button (wheel)
-    if(e.button !== 1) return;
+  const rect = canvas.getBoundingClientRect();
+  const sx = e.clientX - rect.left;
+  const sy = e.clientY - rect.top;
 
-    isDragging = true;
-    lastMouseX = e.clientX;
-    lastMouseY = e.clientY;
+  isDragging = true;
+  lastMouseX = sx;
+  lastMouseY = sy;
 });
 
 canvas.addEventListener("mouseup", ()=> isDragging=false);
 
-canvas.addEventListener("mousemove", e=>{
+canvas.addEventListener("mousemove", e => {
+  if (isDragging) {
+    const rect = canvas.getBoundingClientRect();
+    const sx = e.clientX - rect.left;
+    const sy = e.clientY - rect.top;
 
-    if(isDragging){
+    // inverse-rotate both points (so pan respects camera rotation)
+    const now = unrotateScreenPoint(sx, sy);
+    const last = unrotateScreenPoint(lastMouseX, lastMouseY);
 
-        const dx = e.clientX - lastMouseX;
-        const dy = e.clientY - lastMouseY;
+    const dx = now.x - last.x;
+    const dy = now.y - last.y;
 
-        cameraX += dx;
-        cameraY += dy;
+    cameraX += dx;
+    cameraY += dy;
 
-        lastMouseX = e.clientX;
-        lastMouseY = e.clientY;
-    }
-
+    lastMouseX = sx;
+    lastMouseY = sy;
+  }
 });
 
 // ===== CAMERA ZOOM =====
@@ -1020,20 +1151,19 @@ canvas.addEventListener("wheel", e=>{
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
 
-    // world position before zoom
-    const worldX = (mouseX - cameraX) / zoom;
-    const worldY = (mouseY - cameraY) / zoom;
+    const unrot = unrotateScreenPoint(mouseX, mouseY);
+
+    // world position before zoom (meters)
+    const worldX = (unrot.x - cameraX) / zoom;
+    const worldY = (unrot.y - cameraY) / zoom;
 
     const zoomIntensity = 0.001;
-    const oldZoom = zoom;
-
     zoom += zoom * e.deltaY * -zoomIntensity;
-
     zoom = Math.max(20, Math.min(400, zoom));
 
-    // adjust camera so mouse stays fixed
-    cameraX = mouseX - worldX * zoom;
-    cameraY = mouseY - worldY * zoom;
+    // adjust camera so the SAME screen point stays fixed
+    cameraX = unrot.x - worldX * zoom;
+    cameraY = unrot.y - worldY * zoom;
 });
 
 // ===== IMAGE LOADER =====
@@ -1885,6 +2015,22 @@ function draw(){
 
     ctx.translate(cameraX, cameraY);
 
+    // ===== CAMERA ROTATION (free + follow) =====
+    if (cameraRotationDeg !== 0) {
+    const rad = cameraRotationDeg * Math.PI / 180;
+
+    const pivot = getRotatePivotScreen();
+
+    // επειδή είμαστε μετά το translate(cameraX, cameraY),
+    // μετατρέπουμε pivot από screen -> current coord system
+    const pivotX = pivot.x - cameraX;
+    const pivotY = pivot.y - cameraY;
+
+    ctx.translate(pivotX, pivotY);
+    ctx.rotate(rad);
+    ctx.translate(-pivotX, -pivotY);
+    }
+
     // ===== DRAW BACKGROUND PLAN (centered) =====
     if(showBackground && backgroundImage){
 
@@ -1922,8 +2068,9 @@ function draw(){
     if(mode === "edit" && (paintMode === "paint" || paintMode === "erase")){
 
         // Screen → World (χωρίς διπλό camera offset)
-        const worldX = (mouseScreenX - cameraX) / zoom;
-        const worldY = (mouseScreenY - cameraY) / zoom;
+        const w = screenToWorld(mouseScreenX, mouseScreenY);
+        const worldX = w.x;
+        const worldY = w.y;
 
         const gx = Math.floor(worldX / cellSizeMeters);
         const gy = Math.floor(worldY / cellSizeMeters);
@@ -1991,6 +2138,38 @@ document.getElementById("followCameraBtn")
         console.log("Camera Mode:", cameraMode);
         updateStatusBar();
     });
+
+// ===== ROTATE CAMERA (slider <-> number sync) =====
+const rotateSlider = document.getElementById("rotateCameraSlider");
+const rotateNumber = document.getElementById("rotateCameraNumber");
+
+function clampDeg(v){
+  v = Number(v);
+  if(Number.isNaN(v)) v = 0;
+  v = Math.max(0, Math.min(360, v));
+  return Math.round(v);
+}
+
+function setCameraRotation(deg){
+  cameraRotationDeg = clampDeg(deg);
+  if(rotateSlider) rotateSlider.value = cameraRotationDeg;
+  if(rotateNumber) rotateNumber.value = cameraRotationDeg;
+}
+
+if(rotateSlider){
+  rotateSlider.addEventListener("input", () => {
+    setCameraRotation(rotateSlider.value);
+  });
+}
+
+if(rotateNumber){
+  rotateNumber.addEventListener("input", () => {
+    setCameraRotation(rotateNumber.value);
+  });
+}
+
+// init
+setCameraRotation(0);
 
 // ===== VISIBILITY TOGGLES =====
 const uiPanel = document.getElementById("ui");

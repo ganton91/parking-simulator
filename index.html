@@ -59,7 +59,8 @@ button{
 #drawingOpacityNumber,
 #gridOpacityNumber,
 #topSpeedNumber,
-#accelerationNumber{
+#accelerationNumber,
+#rotateCameraNumber{
     width:90px;
     padding:4px;
     box-sizing:border-box;
@@ -359,6 +360,10 @@ select:disabled{
 
 <hr>
 <h3>Camera Settings</h3>
+
+<label>Rotate Camera (°)</label>
+<input type="range" id="rotateCameraSlider" min="0" max="360" step="1" value="0">
+<input type="number" id="rotateCameraNumber" min="0" max="360" step="1" value="0">
 
 <button id="freeCameraBtn">Free Camera</button>
 <button id="followCameraBtn">Follow Vehicle</button>

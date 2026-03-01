@@ -352,6 +352,18 @@ function setUIEnabled(enabled){
     document.getElementById("freeCameraBtn").disabled = true;
     document.getElementById("followCameraBtn").disabled = true;
     document.getElementById("chaseCameraBtn").disabled = true;
+    
+    // Rotate camera controls: disabled only in chase mode
+    const rotateSlider = document.getElementById("rotateCameraSlider");
+    const rotateNumber = document.getElementById("rotateCameraNumber");
+
+    if (cameraMode === "chase") {
+        rotateSlider.disabled = true;
+        rotateNumber.disabled = true;
+    } else {
+        rotateSlider.disabled = false;
+        rotateNumber.disabled = false;
+    }
 }
 
 // ===== EXPORT LAYOUT =====
@@ -600,6 +612,8 @@ function setMode(m){
         document.getElementById("chaseCameraBtn").disabled = true;
 
         cameraMode = "free";
+
+        updateRotateLock();   // 👈 ΒΑΛ' ΤΟ ΕΔΩ
     }
     else if(mode === "play"){
         setUIEnabled(false);
@@ -607,6 +621,8 @@ function setMode(m){
         document.getElementById("freeCameraBtn").disabled = false;
         document.getElementById("followCameraBtn").disabled = false;
         document.getElementById("chaseCameraBtn").disabled = false;
+
+        updateRotateLock();   // 👈 ΚΑΙ ΕΔΩ
 
         canvas.focus();
     }
@@ -1052,11 +1068,12 @@ document.addEventListener("keydown", function(e){
 
     // C → Toggle Camera (μόνο σε Play)
     if(key === "c" && mode === "play"){
+
         if(cameraMode === "free") cameraMode = "follow";
         else if(cameraMode === "follow") cameraMode = "chase";
         else cameraMode = "free";
 
-        console.log("Camera Mode:", cameraMode);
+        setUIEnabled(mode === "edit");
         updateStatusBar();
     }
 
@@ -2144,27 +2161,42 @@ function loop(t){
 
 requestAnimationFrame(loop);
 
+function updateRotateLock(){
+  const rotateSlider = document.getElementById("rotateCameraSlider");
+  const rotateNumber = document.getElementById("rotateCameraNumber");
+  const lock = (cameraMode === "chase");
+
+  if(rotateSlider) rotateSlider.disabled = lock;
+  if(rotateNumber) rotateNumber.disabled = lock;
+}
+
 // ===== CAMERA BUTTON EVENTS =====
 document.getElementById("freeCameraBtn")
-    .addEventListener("click", function(){
-        cameraMode = "free";
-        console.log("Camera Mode:", cameraMode);
-        updateStatusBar();
-    });
+  .addEventListener("click", function(){
+    cameraMode = "free";
+    updateRotateLock();              // μόνο αυτό, όχι setUIEnabled εδώ
+    console.log("Camera Mode:", cameraMode);
+    updateStatusBar();
+    canvas.focus();
+  });
 
 document.getElementById("followCameraBtn")
-    .addEventListener("click", function(){
-        cameraMode = "follow";
-        console.log("Camera Mode:", cameraMode);
-        updateStatusBar();
-    });
+  .addEventListener("click", function(){
+    cameraMode = "follow";
+    updateRotateLock();
+    console.log("Camera Mode:", cameraMode);
+    updateStatusBar();
+    canvas.focus();
+  });
 
 document.getElementById("chaseCameraBtn")
-    .addEventListener("click", function(){
-        cameraMode = "chase";
-        console.log("Camera Mode:", cameraMode);
-        updateStatusBar();
-    });
+  .addEventListener("click", function(){
+    cameraMode = "chase";
+    updateRotateLock();
+    console.log("Camera Mode:", cameraMode);
+    updateStatusBar();
+    canvas.focus();
+  });
 
 // ===== ROTATE CAMERA (slider <-> number sync) =====
 const rotateSlider = document.getElementById("rotateCameraSlider");

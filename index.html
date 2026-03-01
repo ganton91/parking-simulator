@@ -21,7 +21,7 @@ body{
     bottom:40px;              /* 👈 αυτό είναι το κλειδί */
     background: rgba(20,20,20,1);
     padding:15px;
-    border-radius:8px;
+    border-radius:1px;
     border: 1px solid rgb(255, 255, 255);
     width:min(300px, 90vw);
     box-shadow: 0 6px 20px rgba(0,0,0,0.35);
@@ -67,7 +67,7 @@ button{
 
 .centerButton{
     display:block;
-    margin:10px auto 0 auto;   /* κεντράρισμα */
+    margin:10px auto 25px auto;   /* κεντράρισμα */
     width:80%;
 }
 
@@ -132,12 +132,13 @@ button{
 }
 
 .modal-content{
-    background:#1e1e1e;
-    padding:20px 30px;
-    border-radius:8px;
+    background:rgb(20, 20, 20);
+    padding:10px 30px;
+    border-radius:1px;
     width:320px;
     text-align:center;
     color:white;
+    border: 1px solid rgb(255, 255, 255);
 }
 
 .modal-actions{
@@ -145,6 +146,7 @@ button{
     display:flex;
     justify-content:space-between;
     gap:10px;
+    align-items:center;   /* 👈 αυτό */
 }
 
 .modal-actions button{
@@ -274,11 +276,13 @@ select:disabled{
 <label>Grid Height (m)</label>
 <input type="number" id="worldHeightInput" value="50">
 
-<label>Grid Opacity</label>
-<input type="range" id="gridOpacitySlider" min="0" max="1" step="0.01" value="0.2">
-<input type="number" id="gridOpacityNumber" min="0" max="1" step="0.01" value="0.2">
+<button id="applyWorldBtn" class="centerButton applyBtn">Apply Dimensions</button>
 
-<button id="applyWorldBtn" class="centerButton applyBtn" onclick="applyWorldSettings()">Apply Grid</button>
+<label>Grid Color</label>
+<input type="color" id="gridColorPicker" value="#ffffff">
+
+<label>Background Color</label>
+<input type="color" id="backgroundColorPicker" value="#111111">
 
 <hr>
 <h3>Draw Settings</h3>
@@ -325,6 +329,8 @@ select:disabled{
 <label>Turning Circle (m)</label>
 <input type="number" id="turningCircleInput" step="0.1" value="10.8">
 
+<button id="applyCarBtn" class="centerButton applyBtn">Apply Dimensions</button>
+
 <label>Top Speed (m/s)</label>
 <input type="range" id="topSpeedSlider" min="1" max="20" step="0.1" value="8">
 <input type="number" id="topSpeedNumber" step="0.1" value="8">
@@ -335,10 +341,6 @@ select:disabled{
 
 <label>Car Color</label>
 <input type="color" id="carColorPicker" value="#ff4444">
-
-<button id="applyCarBtn" class="centerButton applyBtn">
-    Apply Vehicle
-</button>
 
 <hr>
 
@@ -372,7 +374,7 @@ select:disabled{
 
 </div>
 
-<canvas id="game"></canvas>
+<canvas id="game" tabindex="0"></canvas>
 
 <div id="shortcutBar">
 
@@ -420,16 +422,16 @@ select:disabled{
 
 <!-- ===== GENERIC CONFIRM MODAL ===== -->
 <div id="confirmModal" class="modal hidden">
-    <div class="modalContent">
-      <h3 id="confirmTitle">Are you sure?</h3>
-      <p id="confirmText">Do you want to proceed?</p>
-  
-      <div class="modalButtons">
-        <button id="confirmYesBtn" class="centerButton applyBtn">Confirm</button>
-        <button id="confirmNoBtn" class="centerButton">Cancel</button>
-      </div>
+  <div class="modal-content">
+    <h3 id="confirmTitle">Are you sure?</h3>
+    <p id="confirmText">Do you want to proceed?</p>
+
+    <div class="modal-actions">
+      <button id="confirmYesBtn" class="centerButton">Confirm</button>
+      <button id="confirmNoBtn" class="centerButton">Cancel</button>
     </div>
   </div>
+</div>
 
 <script src="game.js"></script>
 

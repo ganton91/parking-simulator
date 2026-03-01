@@ -9,6 +9,8 @@ let lastClickCell = null;
 let dragStartCell = null;
 let justDidShiftLine = false;
 let lastPaintedCell = null;
+let gridColor = "#808080";
+let backgroundColor = "#232323";
 
 // ===== VISIBILITY FLAGS =====
 let showUI = true;
@@ -28,8 +30,6 @@ let backgroundImage = null;
 let bgImageBase64 = null;
 let bgScale = 1;
 let bgOpacity = 0.5;
-let gridOpacity = 0.2;
-let pendingGridOpacity = 0.5;
 let drawingOpacity = 1;
 let cameraX = 0;
 let cameraY = 0;
@@ -248,9 +248,6 @@ function applyVehicle(){
     car.trackWidth    = parseFloat(document.getElementById("trackWidthInput").value);
     car.bodyWidth     = parseFloat(document.getElementById("bodyWidthInput").value);
     car.turningCircle = parseFloat(document.getElementById("turningCircleInput").value);
-    car.color = document.getElementById("carColorPicker").value;
-    car.topSpeed = parseFloat(document.getElementById("topSpeedNumber").value);
-    car.acceleration = parseFloat(document.getElementById("accelerationNumber").value);
 
     computeSteeringFromTurningCircle();
     updateCarStats();
@@ -292,12 +289,12 @@ function setUIEnabled(enabled){
     document.getElementById("carColorPicker").disabled = !enabled;
     document.getElementById("drawingOpacitySlider").disabled = !enabled;
     document.getElementById("drawingOpacityNumber").disabled = !enabled;
-    document.getElementById("gridOpacitySlider").disabled = !enabled;
-    document.getElementById("gridOpacityNumber").disabled = !enabled;
     document.getElementById("topSpeedSlider").disabled = !enabled;
     document.getElementById("topSpeedNumber").disabled = !enabled;
     document.getElementById("accelerationSlider").disabled = !enabled;
     document.getElementById("accelerationNumber").disabled = !enabled;
+    document.getElementById("gridColorPicker").disabled = !enabled;
+    document.getElementById("backgroundColorPicker").disabled = !enabled;
 
     // Camera buttons are controlled separately
     document.getElementById("freeCameraBtn").disabled = true;
@@ -326,7 +323,8 @@ function exportLayout(){
         bgScale: bgScale,
         bgOpacity: bgOpacity,
         backgroundImage: bgImageBase64,
-        gridOpacity: gridOpacity,
+        gridColor: gridColor,
+        backgroundColor: backgroundColor,
         drawingOpacity: drawingOpacity,
     };
 
@@ -458,13 +456,18 @@ document.getElementById("layoutLoader").addEventListener("change", function(e){
             updateRemoveBgButton(); // ✅ disable
         }
 
-        // Restore grid opacity
-        if(data.gridOpacity !== undefined){
-            gridOpacity = data.gridOpacity;
-            pendingGridOpacity = data.gridOpacity;
+        // Restore grid color
+        if(data.gridColor){
+            gridColor = data.gridColor;
+            const g = document.getElementById("gridColorPicker");
+            if(g) g.value = gridColor;
+        }
 
-            document.getElementById("gridOpacitySlider").value = data.gridOpacity;
-            document.getElementById("gridOpacityNumber").value = data.gridOpacity;
+        // Restore background color
+        if(data.backgroundColor){
+            backgroundColor = data.backgroundColor;
+            const b = document.getElementById("backgroundColorPicker");
+            if(b) b.value = backgroundColor;
         }
 
         // Restore drawing opacity
@@ -534,6 +537,9 @@ function setMode(m){
 
         document.getElementById("freeCameraBtn").disabled = false;
         document.getElementById("followCameraBtn").disabled = false;
+
+        // focus the canvas so keyboard controls go to the game, not UI
+        canvas.focus();
     }
 
     updateStatusBar();
@@ -545,9 +551,6 @@ function applyWorldSettings(){
     const newHeight = parseFloat(document.getElementById("worldHeightInput").value);
 
     resizeWorld(newWidth, newHeight);
-
-    gridOpacity = pendingGridOpacity;
-
 }
 
 // ===== PAINT FUNCTION (Used by Click & Drag) =====
@@ -828,7 +831,9 @@ document.addEventListener("keydown", function(e){
     // ===== UNDO (Cmd/Ctrl + Z) =====
     if(ctrlOrCmd && !e.shiftKey && key === "z"){
         e.preventDefault();
-        
+
+        if(mode !== "edit") return;
+
         if(undoStack.length > 0){
 
             const stroke = undoStack.pop();
@@ -845,6 +850,8 @@ document.addEventListener("keydown", function(e){
     if(ctrlOrCmd && e.shiftKey && key === "z"){
         e.preventDefault();
 
+        if(mode !== "edit") return;
+
         if(redoStack.length > 0){
 
             const stroke = redoStack.pop();
@@ -857,10 +864,22 @@ document.addEventListener("keydown", function(e){
         return;
     }
 
-    // Αν γράφουμε σε input, μην ενεργοποιούμε shortcuts
-    const activeElement = document.activeElement;
-    if(activeElement.tagName === "INPUT" || activeElement.tagName === "TEXTAREA"){
-        return;
+    // If a RANGE slider has focus, drop focus so shortcuts work
+    const ae = document.activeElement;
+    if(ae && ae.tagName === "INPUT" && ae.type === "range"){
+        ae.blur();
+        // (optional) keep focus on canvas for consistent keyboard control
+        canvas.focus();
+    }
+
+    // If typing in inputs, don't trigger shortcuts
+    if(ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA")){
+        // allow shortcuts when it's a range (handled above)
+        if(ae.tagName === "INPUT" && ae.type === "range"){
+            // do nothing here
+        } else {
+            return;
+        }
     }
 
     // ===== BRUSH SIZE +/- =====
@@ -1124,40 +1143,54 @@ document.getElementById("drawingOpacityNumber")
     document.getElementById("drawingOpacitySlider").value = drawingOpacity;
 });
 
-document.getElementById("gridOpacitySlider")
+// ===== APPLY DIMENSIONS =====
+document.getElementById("gridColorPicker")
 .addEventListener("input", function(e){
-    pendingGridOpacity = parseFloat(e.target.value);
-    document.getElementById("gridOpacityNumber").value = pendingGridOpacity;
+    gridColor = e.target.value;
 });
 
-document.getElementById("gridOpacityNumber")
+document.getElementById("backgroundColorPicker")
 .addEventListener("input", function(e){
-    pendingGridOpacity = parseFloat(e.target.value);
-    document.getElementById("gridOpacitySlider").value = pendingGridOpacity;
+    backgroundColor = e.target.value;
 });
 
 // ===== TOP SPEED CONTROLS =====
 document.getElementById("topSpeedSlider")
 .addEventListener("input", function(e){
-    document.getElementById("topSpeedNumber").value = e.target.value;
+    const v = parseFloat(e.target.value);
+    document.getElementById("topSpeedNumber").value = v;
+    car.topSpeed = v;
 });
 
 document.getElementById("topSpeedNumber")
 .addEventListener("input", function(e){
-    document.getElementById("topSpeedSlider").value = e.target.value;
+    const v = parseFloat(e.target.value);
+    document.getElementById("topSpeedSlider").value = v;
+    car.topSpeed = v;
 });
 
 // ===== ACCELERATION CONTROLS =====
 document.getElementById("accelerationSlider")
 .addEventListener("input", function(e){
-    document.getElementById("accelerationNumber").value = e.target.value;
+    const v = parseFloat(e.target.value);
+    document.getElementById("accelerationNumber").value = v;
+    car.acceleration = v;
 });
 
 document.getElementById("accelerationNumber")
 .addEventListener("input", function(e){
-    document.getElementById("accelerationSlider").value = e.target.value;
+    const v = parseFloat(e.target.value);
+    document.getElementById("accelerationSlider").value = v;
+    car.acceleration = v;
 });
 
+// ===== CAR COLOR CONTROL =====
+document.getElementById("carColorPicker")
+.addEventListener("input", function(e){
+    car.color = e.target.value;
+});
+
+// ===== RESET VEHICLE POSITION CONTROL =====
 document.getElementById("resetVehicleBtn")
     .addEventListener("click", resetVehicle);
 
@@ -1240,6 +1273,30 @@ if (eraseAllBtn) {
             }
         );
 
+    });
+}
+
+// ===== APPLY DIMENSIONS BUTTON (uses generic confirm modal) =====
+const applyWorldBtn = document.getElementById("applyWorldBtn");
+
+if(applyWorldBtn){
+    applyWorldBtn.addEventListener("click", function(){
+
+        const newWidth  = parseFloat(document.getElementById("worldWidthInput").value);
+        const newHeight = parseFloat(document.getElementById("worldHeightInput").value);
+
+        // If nothing changes, do nothing
+        if(newWidth === worldWidthMeters && newHeight === worldHeightMeters){
+            return;
+        }
+
+        openConfirmModal(
+            "Apply dimensions?",
+            "Changing the grid size can shift or crop painted cells. If the grid becomes smaller, drawings near the edges may be lost. Do you want to proceed?",
+            function(){
+                resizeWorld(newWidth, newHeight);
+            }
+        );
     });
 }
 
@@ -1474,8 +1531,8 @@ function drawGridLines(){
     const worldHeightPx = worldHeightMeters * zoom;
 
     // ===== 10cm minor grid =====
-    ctx.strokeStyle = `rgba(255,255,255,${gridOpacity * 0.3})`;
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = gridColor;
+    ctx.lineWidth = 0.2;
 
     for(let x = 0; x <= worldWidthMeters; x += 0.1){
         ctx.beginPath();
@@ -1492,8 +1549,8 @@ function drawGridLines(){
     }
 
     // ===== 50cm mid grid =====
-    ctx.strokeStyle = `rgba(255,255,255,${gridOpacity * 0.6})`;
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = gridColor;
+    ctx.lineWidth = 0.4;
 
     for(let x = 0; x <= worldWidthMeters; x += 0.5){
         ctx.beginPath();
@@ -1510,8 +1567,8 @@ function drawGridLines(){
     }
 
     // ===== 1m major grid =====
-    ctx.strokeStyle = `rgba(255,255,255,${gridOpacity})`;
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = gridColor;
+    ctx.lineWidth = 0.6;
 
     for(let x = 0; x <= worldWidthMeters; x += 1){
         ctx.beginPath();
@@ -1541,12 +1598,19 @@ function drawDrawing(){
 
         ctx.fillStyle = grid[y][x];
 
-        ctx.fillRect(
-          x * cellSizeMeters * zoom,
-          y * cellSizeMeters * zoom,
-          cellSizeMeters * zoom,
-          cellSizeMeters * zoom
-        );
+            const px = x * cellSizeMeters * zoom;
+            const py = y * cellSizeMeters * zoom;
+            const s  = cellSizeMeters * zoom;
+
+            // μικρό overlap για να μη φαίνονται seams
+            const pad = 0.4; // px (δοκίμασε 0.5 ή 1)
+
+            ctx.fillRect(
+            px - pad,
+            py - pad,
+            s + pad * 2,
+            s + pad * 2
+            );
 
         ctx.restore();
       }
@@ -1814,6 +1878,9 @@ function draw(){
 
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
+    ctx.fillStyle = backgroundColor;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
     ctx.save();
 
     ctx.translate(cameraX, cameraY);
@@ -1998,3 +2065,32 @@ applyVisibility();
 
 updateToolUI();
 updateRemoveBgButton();
+
+// ===== INITIAL COLOR SYNC =====
+const gridPicker = document.getElementById("gridColorPicker");
+if(gridPicker){
+    gridPicker.value = gridColor;
+}
+
+const bgPicker = document.getElementById("backgroundColorPicker");
+if(bgPicker){
+    bgPicker.value = backgroundColor;
+}
+
+// ===== PLAY MODE: keep keyboard focus on canvas even after UI clicks =====
+document.getElementById("ui").addEventListener("click", function(){
+    if(mode !== "play") return;
+
+    // allow text selection etc. if you ever need it; but for now keep focus on canvas
+    e.preventDefault();   // prevents focus from moving to UI controls
+    canvas.focus();
+});
+
+// ===== PLAY MODE: after any button click, return focus to canvas =====
+document.addEventListener("click", function(e){
+    if(mode !== "play") return;
+
+    const btn = e.target.closest("button");
+    if(!btn) return;
+    canvas.focus();
+});

@@ -1554,7 +1554,7 @@ function drawDrawing(){
             const s  = cellSizeMeters * zoom;
 
             // μικρό overlap για να μη φαίνονται seams
-            const pad = 0.5; // px (δοκίμασε 0.5 ή 1)
+            const pad = 0.4; // px (δοκίμασε 0.5 ή 1)
 
             ctx.fillRect(
             px - pad,

@@ -546,7 +546,8 @@ function applyWorldSettings(){
 
     resizeWorld(newWidth, newHeight);
 
-    gridOpacity = pendingGridOpacity;
+    const sliderValue = parseFloat(document.getElementById("gridOpacitySlider").value);
+    gridOpacity = sliderValue;
 
 }
 

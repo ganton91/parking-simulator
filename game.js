@@ -892,8 +892,46 @@ canvas.addEventListener("mouseleave", function(e){
 
 // ===== CONTROLS =====
 const keys = {};
-document.addEventListener("keydown", e=>keys[e.key]=true);
-document.addEventListener("keyup", e=>keys[e.key]=false);
+
+document.addEventListener("keydown", e => {
+
+  const el = document.activeElement;
+  const tag = el ? el.tagName.toLowerCase() : "";
+
+  const isTyping =
+    tag === "input" ||
+    tag === "textarea" ||
+    tag === "select" ||
+    (el && el.isContentEditable);
+
+  // 🔁 Enter / Escape επιστρέφει focus ΠΑΝΤΑ
+  if (isTyping && (e.key === "Escape" || e.key === "Enter")) {
+    e.preventDefault();
+    canvas.focus();
+    return;
+  }
+
+  // 🚗 Block driving controls μόνο στο play
+  if (mode === "play" && isTyping) return;
+
+  keys[e.key] = true;
+});
+
+document.addEventListener("keyup", e => {
+
+  const el = document.activeElement;
+  const tag = el ? el.tagName.toLowerCase() : "";
+
+  const isTyping =
+    tag === "input" ||
+    tag === "textarea" ||
+    tag === "select" ||
+    (el && el.isContentEditable);
+
+  if (mode === "play" && isTyping) return;
+
+  keys[e.key] = false;
+});
 
 // ===== KEYBOARD SHORTCUTS =====
 document.addEventListener("keydown", function(e){

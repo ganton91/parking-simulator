@@ -158,6 +158,38 @@ let mode = "edit";
 let cameraMode = "free"; // "free" or "follow"
 let cameraRotationDeg = 0; // 0..360
 
+function unrotateScreenPoint(sx, sy){
+    // sx, sy: mouse position inside canvas (pixels)
+    if(cameraMode !== "free" || cameraRotationDeg === 0){
+        return { x: sx, y: sy };
+    }
+
+    const rad = cameraRotationDeg * Math.PI / 180;
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2;
+
+    const dx = sx - cx;
+    const dy = sy - cy;
+
+    const cos = Math.cos(rad);
+    const sin = Math.sin(rad);
+
+    // rotate by -rad (inverse)
+    const ux = cx + dx * cos + dy * sin;
+    const uy = cy - dx * sin + dy * cos;
+
+    return { x: ux, y: uy };
+}
+
+function screenToWorld(sx, sy){
+    // returns world coords in meters
+    const p = unrotateScreenPoint(sx, sy);
+    return {
+        x: (p.x - cameraX) / zoom,
+        y: (p.y - cameraY) / zoom
+    };
+}
+
 // ===== CAR DATA =====
 
 const vehicleSpawn = {
@@ -608,8 +640,12 @@ function paintAtMouse(e){
 
     const rect = canvas.getBoundingClientRect();
 
-    const mx = (e.clientX - rect.left - cameraX) / zoom;
-    const my = (e.clientY - rect.top - cameraY) / zoom;
+    const sx = e.clientX - rect.left;
+    const sy = e.clientY - rect.top;
+
+    const w = screenToWorld(sx, sy);
+    const mx = w.x;
+    const my = w.y;
 
     const gx = Math.floor(mx / cellSizeMeters);
     const gy = Math.floor(my / cellSizeMeters);
@@ -661,8 +697,12 @@ canvas.addEventListener("mousedown", function(e){
 
         const rect = canvas.getBoundingClientRect();
 
-        const mx = (e.clientX - rect.left - cameraX) / zoom;
-        const my = (e.clientY - rect.top - cameraY) / zoom;
+        const sx = e.clientX - rect.left;
+        const sy = e.clientY - rect.top;
+
+        const w = screenToWorld(sx, sy);
+        const mx = w.x;
+        const my = w.y;
 
         const gx = Math.floor(mx / cellSizeMeters);
         const gy = Math.floor(my / cellSizeMeters);
@@ -702,8 +742,12 @@ canvas.addEventListener("mousedown", function(e){
     // Υπολογισμός grid cell
     const rect = canvas.getBoundingClientRect();
 
-    const mx = (e.clientX - rect.left - cameraX) / zoom;
-    const my = (e.clientY - rect.top - cameraY) / zoom;
+    const sx = e.clientX - rect.left;
+    const sy = e.clientY - rect.top;
+
+    const w = screenToWorld(sx, sy);
+    const mx = w.x;
+    const my = w.y;
 
     const gx = Math.floor(mx / cellSizeMeters);
     const gy = Math.floor(my / cellSizeMeters);
@@ -736,8 +780,12 @@ canvas.addEventListener("mousemove", function(e){
 
     const rect = canvas.getBoundingClientRect();
 
-    const mx = (e.clientX - rect.left - cameraX) / zoom;
-    const my = (e.clientY - rect.top - cameraY) / zoom;
+    const sx = e.clientX - rect.left;
+    const sy = e.clientY - rect.top;
+
+    const w = screenToWorld(sx, sy);
+    const mx = w.x;
+    const my = w.y;
 
     let gx = Math.floor(mx / cellSizeMeters);
     let gy = Math.floor(my / cellSizeMeters);
@@ -777,8 +825,12 @@ canvas.addEventListener("mouseup", function(e){
     // Υπολογισμός cell στο οποίο τελείωσε το drag
     const rect = canvas.getBoundingClientRect();
 
-    const mx = (e.clientX - rect.left - cameraX) / zoom;
-    const my = (e.clientY - rect.top - cameraY) / zoom;
+    const sx = e.clientX - rect.left;
+    const sy = e.clientY - rect.top;
+
+    const w = screenToWorld(sx, sy);
+    const mx = w.x;
+    const my = w.y;
 
     const gx = Math.floor(mx / cellSizeMeters);
     const gy = Math.floor(my / cellSizeMeters);
@@ -806,8 +858,12 @@ canvas.addEventListener("mouseleave", function(e){
 
     const rect = canvas.getBoundingClientRect();
 
-    const mx = (e.clientX - rect.left - cameraX) / zoom;
-    const my = (e.clientY - rect.top - cameraY) / zoom;
+    const sx = e.clientX - rect.left;
+    const sy = e.clientY - rect.top;
+
+    const w = screenToWorld(sx, sy);
+    const mx = w.x;
+    const my = w.y;
 
     const gx = Math.floor(mx / cellSizeMeters);
     const gy = Math.floor(my / cellSizeMeters);
@@ -992,32 +1048,40 @@ let isDragging = false;
 let lastMouseX = 0;
 let lastMouseY = 0;
 
-canvas.addEventListener("mousedown", e=>{
+canvas.addEventListener("mousedown", e => {
+  // Only middle mouse button (wheel)
+  if (e.button !== 1) return;
 
-    // Only middle mouse button (wheel)
-    if(e.button !== 1) return;
+  const rect = canvas.getBoundingClientRect();
+  const sx = e.clientX - rect.left;
+  const sy = e.clientY - rect.top;
 
-    isDragging = true;
-    lastMouseX = e.clientX;
-    lastMouseY = e.clientY;
+  isDragging = true;
+  lastMouseX = sx;
+  lastMouseY = sy;
 });
 
 canvas.addEventListener("mouseup", ()=> isDragging=false);
 
-canvas.addEventListener("mousemove", e=>{
+canvas.addEventListener("mousemove", e => {
+  if (isDragging) {
+    const rect = canvas.getBoundingClientRect();
+    const sx = e.clientX - rect.left;
+    const sy = e.clientY - rect.top;
 
-    if(isDragging){
+    // inverse-rotate both points (so pan respects camera rotation)
+    const now = unrotateScreenPoint(sx, sy);
+    const last = unrotateScreenPoint(lastMouseX, lastMouseY);
 
-        const dx = e.clientX - lastMouseX;
-        const dy = e.clientY - lastMouseY;
+    const dx = now.x - last.x;
+    const dy = now.y - last.y;
 
-        cameraX += dx;
-        cameraY += dy;
+    cameraX += dx;
+    cameraY += dy;
 
-        lastMouseX = e.clientX;
-        lastMouseY = e.clientY;
-    }
-
+    lastMouseX = sx;
+    lastMouseY = sy;
+  }
 });
 
 // ===== CAMERA ZOOM =====
@@ -1030,20 +1094,19 @@ canvas.addEventListener("wheel", e=>{
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
 
-    // world position before zoom
-    const worldX = (mouseX - cameraX) / zoom;
-    const worldY = (mouseY - cameraY) / zoom;
+    const unrot = unrotateScreenPoint(mouseX, mouseY);
+
+    // world position before zoom (meters)
+    const worldX = (unrot.x - cameraX) / zoom;
+    const worldY = (unrot.y - cameraY) / zoom;
 
     const zoomIntensity = 0.001;
-    const oldZoom = zoom;
-
     zoom += zoom * e.deltaY * -zoomIntensity;
-
     zoom = Math.max(20, Math.min(400, zoom));
 
-    // adjust camera so mouse stays fixed
-    cameraX = mouseX - worldX * zoom;
-    cameraY = mouseY - worldY * zoom;
+    // adjust camera so the SAME screen point stays fixed
+    cameraX = unrot.x - worldX * zoom;
+    cameraY = unrot.y - worldY * zoom;
 });
 
 // ===== IMAGE LOADER =====
@@ -1895,6 +1958,20 @@ function draw(){
 
     ctx.translate(cameraX, cameraY);
 
+    // ===== CAMERA ROTATION (Free Camera, rotate around CANVAS CENTER) =====
+    if (cameraMode === "free" && cameraRotationDeg !== 0) {
+        const rad = cameraRotationDeg * Math.PI / 180;
+
+        // Because we've already translated by (cameraX, cameraY),
+        // the canvas center in the *current* coordinate system is shifted:
+        const pivotX = canvas.width / 2 - cameraX;
+        const pivotY = canvas.height / 2 - cameraY;
+
+        ctx.translate(pivotX, pivotY);
+        ctx.rotate(rad);
+        ctx.translate(-pivotX, -pivotY);
+    }
+
     // ===== DRAW BACKGROUND PLAN (centered) =====
     if(showBackground && backgroundImage){
 
@@ -1932,8 +2009,9 @@ function draw(){
     if(mode === "edit" && (paintMode === "paint" || paintMode === "erase")){
 
         // Screen → World (χωρίς διπλό camera offset)
-        const worldX = (mouseScreenX - cameraX) / zoom;
-        const worldY = (mouseScreenY - cameraY) / zoom;
+        const w = screenToWorld(mouseScreenX, mouseScreenY);
+        const worldX = w.x;
+        const worldY = w.y;
 
         const gx = Math.floor(worldX / cellSizeMeters);
         const gy = Math.floor(worldY / cellSizeMeters);

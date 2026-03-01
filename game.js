@@ -40,6 +40,13 @@ console.log("Parking Simulator Loaded");
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
+// ===== After moving any slider, return focus to canvas =====
+document.querySelectorAll('input[type="range"]').forEach(slider => {
+  slider.addEventListener("input", () => {
+    canvas.focus();
+  });
+});
+
 function resizeCanvas(){
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;

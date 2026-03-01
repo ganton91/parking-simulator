@@ -1659,7 +1659,7 @@ function update(dt){
         // normalize 0..360
         deg = ((deg % 360) + 360) % 360;
 
-        setCameraRotation(deg); // ενημερώνει και slider/number
+        cameraRotationDeg = deg; // smooth float, no rounding // ενημερώνει και slider/number
     }
 }
 

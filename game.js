@@ -248,9 +248,6 @@ function applyVehicle(){
     car.trackWidth    = parseFloat(document.getElementById("trackWidthInput").value);
     car.bodyWidth     = parseFloat(document.getElementById("bodyWidthInput").value);
     car.turningCircle = parseFloat(document.getElementById("turningCircleInput").value);
-    car.color = document.getElementById("carColorPicker").value;
-    car.topSpeed = parseFloat(document.getElementById("topSpeedNumber").value);
-    car.acceleration = parseFloat(document.getElementById("accelerationNumber").value);
 
     computeSteeringFromTurningCircle();
     updateCarStats();
@@ -867,10 +864,22 @@ document.addEventListener("keydown", function(e){
         return;
     }
 
-    // Αν γράφουμε σε input, μην ενεργοποιούμε shortcuts
-    const activeElement = document.activeElement;
-    if(activeElement.tagName === "INPUT" || activeElement.tagName === "TEXTAREA"){
-        return;
+    // If a RANGE slider has focus, drop focus so shortcuts work
+    const ae = document.activeElement;
+    if(ae && ae.tagName === "INPUT" && ae.type === "range"){
+        ae.blur();
+        // (optional) keep focus on canvas for consistent keyboard control
+        canvas.focus();
+    }
+
+    // If typing in inputs, don't trigger shortcuts
+    if(ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA")){
+        // allow shortcuts when it's a range (handled above)
+        if(ae.tagName === "INPUT" && ae.type === "range"){
+            // do nothing here
+        } else {
+            return;
+        }
     }
 
     // ===== BRUSH SIZE +/- =====
@@ -1148,25 +1157,40 @@ document.getElementById("backgroundColorPicker")
 // ===== TOP SPEED CONTROLS =====
 document.getElementById("topSpeedSlider")
 .addEventListener("input", function(e){
-    document.getElementById("topSpeedNumber").value = e.target.value;
+    const v = parseFloat(e.target.value);
+    document.getElementById("topSpeedNumber").value = v;
+    car.topSpeed = v;
 });
 
 document.getElementById("topSpeedNumber")
 .addEventListener("input", function(e){
-    document.getElementById("topSpeedSlider").value = e.target.value;
+    const v = parseFloat(e.target.value);
+    document.getElementById("topSpeedSlider").value = v;
+    car.topSpeed = v;
 });
 
 // ===== ACCELERATION CONTROLS =====
 document.getElementById("accelerationSlider")
 .addEventListener("input", function(e){
-    document.getElementById("accelerationNumber").value = e.target.value;
+    const v = parseFloat(e.target.value);
+    document.getElementById("accelerationNumber").value = v;
+    car.acceleration = v;
 });
 
 document.getElementById("accelerationNumber")
 .addEventListener("input", function(e){
-    document.getElementById("accelerationSlider").value = e.target.value;
+    const v = parseFloat(e.target.value);
+    document.getElementById("accelerationSlider").value = v;
+    car.acceleration = v;
 });
 
+// ===== CAR COLOR CONTROL =====
+document.getElementById("carColorPicker")
+.addEventListener("input", function(e){
+    car.color = e.target.value;
+});
+
+// ===== RESET VEHICLE POSITION CONTROL =====
 document.getElementById("resetVehicleBtn")
     .addEventListener("click", resetVehicle);
 

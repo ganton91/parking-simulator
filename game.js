@@ -828,7 +828,9 @@ document.addEventListener("keydown", function(e){
     // ===== UNDO (Cmd/Ctrl + Z) =====
     if(ctrlOrCmd && !e.shiftKey && key === "z"){
         e.preventDefault();
-        
+
+        if(mode !== "edit") return;
+
         if(undoStack.length > 0){
 
             const stroke = undoStack.pop();
@@ -844,6 +846,8 @@ document.addEventListener("keydown", function(e){
     // ===== REDO (Cmd/Ctrl + Shift + Z) =====
     if(ctrlOrCmd && e.shiftKey && key === "z"){
         e.preventDefault();
+
+        if(mode !== "edit") return;
 
         if(redoStack.length > 0){
 

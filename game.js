@@ -2,7 +2,7 @@ let mouseScreenX = 0;
 let mouseScreenY = 0;
 let brushSize = 1; // 1 = 10cm, 2 = 20cm, 3 = 30cm
 let paintMode = "paint"; // "paint" or "erase"
-let paintColor = "#777";   // default obstacle color
+let paintColor = "#777777";   // default obstacle color
 let eyedropperMode = false;
 let isPainting = false;
 let lastClickCell = null;

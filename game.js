@@ -160,13 +160,14 @@ let cameraRotationDeg = 0; // 0..360
 
 function unrotateScreenPoint(sx, sy){
     // sx, sy: mouse position inside canvas (pixels)
-    if(cameraMode !== "free" || cameraRotationDeg === 0){
+    if(cameraRotationDeg === 0){
         return { x: sx, y: sy };
     }
 
     const rad = cameraRotationDeg * Math.PI / 180;
-    const cx = canvas.width / 2;
-    const cy = canvas.height / 2;
+    const pivot = getRotatePivotScreen();
+    const cx = pivot.x;
+    const cy = pivot.y;
 
     const dx = sx - cx;
     const dy = sy - cy;
@@ -188,6 +189,17 @@ function screenToWorld(sx, sy){
         x: (p.x - cameraX) / zoom,
         y: (p.y - cameraY) / zoom
     };
+}
+
+function getRotatePivotScreen(){
+  // pivot in SCREEN pixels
+  if(cameraMode === "follow"){
+    // στο follow, εσύ κεντράρεις το (centerX, centerY) στο κέντρο του canvas
+    // άρα pivot = κέντρο canvas
+    return { x: canvas.width / 2, y: canvas.height / 2 };
+  }
+  // free
+  return { x: canvas.width / 2, y: canvas.height / 2 };
 }
 
 // ===== CAR DATA =====
@@ -1958,18 +1970,20 @@ function draw(){
 
     ctx.translate(cameraX, cameraY);
 
-    // ===== CAMERA ROTATION (Free Camera, rotate around CANVAS CENTER) =====
-    if (cameraMode === "free" && cameraRotationDeg !== 0) {
-        const rad = cameraRotationDeg * Math.PI / 180;
+    // ===== CAMERA ROTATION (free + follow) =====
+    if (cameraRotationDeg !== 0) {
+    const rad = cameraRotationDeg * Math.PI / 180;
 
-        // Because we've already translated by (cameraX, cameraY),
-        // the canvas center in the *current* coordinate system is shifted:
-        const pivotX = canvas.width / 2 - cameraX;
-        const pivotY = canvas.height / 2 - cameraY;
+    const pivot = getRotatePivotScreen();
 
-        ctx.translate(pivotX, pivotY);
-        ctx.rotate(rad);
-        ctx.translate(-pivotX, -pivotY);
+    // επειδή είμαστε μετά το translate(cameraX, cameraY),
+    // μετατρέπουμε pivot από screen -> current coord system
+    const pivotX = pivot.x - cameraX;
+    const pivotY = pivot.y - cameraY;
+
+    ctx.translate(pivotX, pivotY);
+    ctx.rotate(rad);
+    ctx.translate(-pivotX, -pivotY);
     }
 
     // ===== DRAW BACKGROUND PLAN (centered) =====

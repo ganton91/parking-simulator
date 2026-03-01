@@ -156,6 +156,7 @@ let mode = "edit";
 
 // ===== CAMERA MODE =====
 let cameraMode = "free"; // "free" or "follow"
+let cameraRotationDeg = 0; // 0..360
 
 // ===== CAR DATA =====
 
@@ -326,6 +327,7 @@ function exportLayout(){
         gridColor: gridColor,
         backgroundColor: backgroundColor,
         drawingOpacity: drawingOpacity,
+        rotateCameraDeg: cameraRotationDeg,
     };
 
     const json = JSON.stringify(saveData);
@@ -476,6 +478,14 @@ document.getElementById("layoutLoader").addEventListener("change", function(e){
 
             document.getElementById("drawingOpacitySlider").value = data.drawingOpacity;
             document.getElementById("drawingOpacityNumber").value = data.drawingOpacity;
+        }
+
+        // Restore rotate camera degrees
+        if(data.rotateCameraDeg !== undefined){
+            cameraRotationDeg = data.rotateCameraDeg;
+
+            document.getElementById("rotateCameraSlider").value = data.rotateCameraDeg;
+            document.getElementById("rotateCameraNumber").value = data.rotateCameraDeg;
         }
     };
 
@@ -1991,6 +2001,38 @@ document.getElementById("followCameraBtn")
         console.log("Camera Mode:", cameraMode);
         updateStatusBar();
     });
+
+// ===== ROTATE CAMERA (slider <-> number sync) =====
+const rotateSlider = document.getElementById("rotateCameraSlider");
+const rotateNumber = document.getElementById("rotateCameraNumber");
+
+function clampDeg(v){
+  v = Number(v);
+  if(Number.isNaN(v)) v = 0;
+  v = Math.max(0, Math.min(360, v));
+  return Math.round(v);
+}
+
+function setCameraRotation(deg){
+  cameraRotationDeg = clampDeg(deg);
+  if(rotateSlider) rotateSlider.value = cameraRotationDeg;
+  if(rotateNumber) rotateNumber.value = cameraRotationDeg;
+}
+
+if(rotateSlider){
+  rotateSlider.addEventListener("input", () => {
+    setCameraRotation(rotateSlider.value);
+  });
+}
+
+if(rotateNumber){
+  rotateNumber.addEventListener("input", () => {
+    setCameraRotation(rotateNumber.value);
+  });
+}
+
+// init
+setCameraRotation(0);
 
 // ===== VISIBILITY TOGGLES =====
 const uiPanel = document.getElementById("ui");

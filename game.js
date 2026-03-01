@@ -352,18 +352,6 @@ function setUIEnabled(enabled){
     document.getElementById("freeCameraBtn").disabled = true;
     document.getElementById("followCameraBtn").disabled = true;
     document.getElementById("chaseCameraBtn").disabled = true;
-    
-    // Rotate camera controls: disabled only in chase mode
-    const rotateSlider = document.getElementById("rotateCameraSlider");
-    const rotateNumber = document.getElementById("rotateCameraNumber");
-
-    if (cameraMode === "chase") {
-        rotateSlider.disabled = true;
-        rotateNumber.disabled = true;
-    } else {
-        rotateSlider.disabled = false;
-        rotateNumber.disabled = false;
-    }
 }
 
 // ===== EXPORT LAYOUT =====
@@ -627,6 +615,7 @@ function setMode(m){
         canvas.focus();
     }
 
+    updateRotateLock();
     updateStatusBar();
 }
 

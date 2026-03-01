@@ -1073,8 +1073,10 @@ document.addEventListener("keydown", function(e){
         else if(cameraMode === "follow") cameraMode = "chase";
         else cameraMode = "free";
 
-        setUIEnabled(mode === "edit");
+        updateRotateLock();   // 👈 αυτό, όχι setUIEnabled
         updateStatusBar();
+        canvas.focus();
+        return;
     }
 
     // P → Paint (μόνο σε Edit)
@@ -1677,6 +1679,10 @@ function update(dt){
         deg = ((deg % 360) + 360) % 360;
 
         cameraRotationDeg = deg; // smooth float, no rounding // ενημερώνει και slider/number
+        // Update UI display while locked
+        const d = Math.round(cameraRotationDeg);
+        document.getElementById("rotateCameraSlider").value = d;
+        document.getElementById("rotateCameraNumber").value = d;
     }
 }
 
@@ -2166,8 +2172,8 @@ function updateRotateLock(){
   const rotateNumber = document.getElementById("rotateCameraNumber");
   const lock = (cameraMode === "chase");
 
-  if(rotateSlider) rotateSlider.disabled = lock;
-  if(rotateNumber) rotateNumber.disabled = lock;
+  if(rotateSlider) rotateSlider.classList.toggle("readonly-control", lock);
+  if(rotateNumber) rotateNumber.classList.toggle("readonly-control", lock);
 }
 
 // ===== CAMERA BUTTON EVENTS =====
